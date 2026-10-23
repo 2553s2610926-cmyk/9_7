@@ -1,4 +1,3 @@
-
 import streamlit as st
 
 st.set_page_config(
@@ -355,6 +354,41 @@ st.divider()
 with st.container(border=True):
     st.subheader("💡 알아두면 좋은 팁")
     st.write(guide["tip"])
+
+# ------------------------------------
+# 도움받을 사유 선택
+# ------------------------------------
+st.divider()
+st.subheader("🙋 무엇을 도와드릴까요?")
+
+help_reason = st.selectbox(
+    "도움이 필요한 사유를 선택하세요.",
+    [
+        "스마트폰 사용이 어려워요",
+        "컴퓨터 사용이 어려워요",
+        "키오스크 사용이 어려워요",
+        "ATM 사용이 어려워요",
+        "프린터 사용이 어려워요",
+        "기타 사유",
+    ],
+    key="help_reason",
+)
+
+other_reason = ""
+if help_reason == "기타 사유":
+    other_reason = st.text_area(
+        "어떤 점이 어려우신가요?",
+        placeholder="도움이 필요한 이유를 자유롭게 적어 주세요.",
+        key="other_help_reason",
+    )
+
+if st.button("도움 요청 내용 확인"):
+    if help_reason == "기타 사유" and not other_reason.strip():
+        st.warning("도움이 필요한 사유를 입력해 주세요.")
+    elif help_reason == "기타 사유":
+        st.success(f"선택한 사유: {help_reason}\n\n입력한 내용: {other_reason.strip()}")
+    else:
+        st.success(f"선택한 사유: {help_reason}")
 
 st.subheader("🙋 사용 중 문제가 생겼다면")
 st.markdown(

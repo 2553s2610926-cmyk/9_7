@@ -101,7 +101,7 @@ SYMBOLS_DATA = {
         "icon": "➕",
         "name": "더하기 (메뉴/추가)",
         "metaphor": "💡 '보물상자 열기'예요!",
-        "meaning": "숨겨진 다른 기능들(지도 보내기, 선물하기, 사진 보주기 등)을 더 보여줍니다.",
+        "meaning": "숨겨진 다른 기능들(지도 보내기, 선물하기, 사진 보내기 등)을 더 보여줍니다.",
         "example": "대화창 왼쪽 아래 ➕를 누르면 카메라, 송금, 지도 등의 추가 메뉴가 나옵니다."
     },
     "🔒 자물쇠": {
@@ -141,11 +141,9 @@ tab1, tab2, tab3 = st.tabs(["📖 기호 사전", "🧩 퀴즈 풀기", "💡 �
 with tab1:
     st.subheader("👇 궁금한 기호를 눌러보세요")
     
-    # Grid placement for symbols
     keys = list(SYMBOLS_DATA.keys())
     cols = st.columns(4)
     
-    # Initialize session state for selected symbol
     if "selected_symbol" not in st.session_state:
         st.session_state.selected_symbol = keys[0]
         
@@ -154,7 +152,6 @@ with tab1:
             if st.button(key, key=f"btn_{idx}", use_container_width=True):
                 st.session_state.selected_symbol = key
 
-    # Selected item display card
     selected_data = SYMBOLS_DATA[st.session_state.selected_symbol]
     
     st.markdown("---")
@@ -169,13 +166,12 @@ with tab1:
     """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# Tab 2: Quiz
+# Tab 2: Quiz (Updated with Wrong Answer Explanation)
 # ---------------------------------------------------------
 with tab2:
     st.subheader("🧩 오늘 배운 기호 퀴즈")
     st.write("기호의 의미를 맞혀보며 잊지 않도록 복습해 보세요.")
 
-    # Initialize quiz state
     if "quiz_index" not in st.session_state:
         st.session_state.quiz_index = 0
     if "score" not in st.session_state:
@@ -195,7 +191,6 @@ with tab2:
         st.markdown(f"<h1 style='text-align: center;'>{current_q['icon']}</h1>", unsafe_allow_html=True)
         st.markdown(f"### 이 기호의 역할은 무엇일까요?")
 
-        # Options generation
         correct_answer = current_q['name']
         
         if f"options_{current_idx}" not in st.session_state:
@@ -212,12 +207,26 @@ with tab2:
         if st.button("정답 확인하기", type="primary"):
             if user_choice == correct_answer:
                 st.success("🎉 정답입니다! 참 잘하셨어요.")
-                st.session_state.score += 1
             else:
-                st.error(f"아쉬워요! 정답은 [{correct_answer}] 입니다.")
-                st.caption(f"힌트: {current_q['metaphor']}")
+                st.error(f"아쉬워요! 정답은 **[{correct_answer}]** 입니다.")
+                
+                # 선택한 오답 찾기 및 원래 용도 안내 추가
+                wrong_symbol = None
+                for v in SYMBOLS_DATA.values():
+                    if v['name'] == user_choice:
+                        wrong_symbol = v
+                        break
+                
+                if wrong_symbol:
+                    st.warning(f"""
+                    💡 **골라주신 [{wrong_symbol['name']}]은 어떤 아이콘일까요?**
+                    * **비유:** {wrong_symbol['metaphor']}
+                    * **원래 용도:** {wrong_symbol['meaning']}
+                    """)
 
             if st.button("다음 문제로 ➡️"):
+                if user_choice == correct_answer:
+                    st.session_state.score += 1
                 st.session_state.quiz_index += 1
                 st.rerun()
 

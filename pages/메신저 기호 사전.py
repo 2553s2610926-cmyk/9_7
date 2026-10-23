@@ -66,7 +66,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# Data Definition (Symbols Dictionary) - Updated with actual KakaoTalk icons
+# Data Definition (Symbols Dictionary)
 # ---------------------------------------------------------
 SYMBOLS_DATA = {
     "🔍 돋보기": {
@@ -194,16 +194,19 @@ with tab1:
     """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# Tab 2: Quiz
+# Tab 2: Quiz (Answer Check & Next Button Logic)
 # ---------------------------------------------------------
 with tab2:
     st.subheader("🧩 오늘 배운 기호 퀴즈")
     st.write("기호의 의미를 맞혀보며 잊지 않도록 복습해 보세요.")
 
+    # State initialization for Quiz
     if "quiz_index" not in st.session_state:
         st.session_state.quiz_index = 0
     if "score" not in st.session_state:
         st.session_state.score = 0
+    if "quiz_submitted" not in st.session_state:
+        st.session_state.quiz_submitted = False
     if "quiz_list" not in st.session_state:
         items = list(SYMBOLS_DATA.values())
         random.shuffle(items)
@@ -221,6 +224,7 @@ with tab2:
 
         correct_answer = current_q['name']
         
+        # Options shuffle per question
         if f"options_{current_idx}" not in st.session_state:
             wrong_answers = [v['name'] for v in SYMBOLS_DATA.values() if v['name'] != correct_answer]
             selected_wrongs = random.sample(wrong_answers, 3)
@@ -230,17 +234,36 @@ with tab2:
         else:
             options = st.session_state[f"options_{current_idx}"]
 
-        user_choice = st.radio("정답을 선택하세요:", options, key=f"radio_{current_idx}")
+        # Disable radio selection after submission
+        user_choice = st.radio(
+            "정답을 선택하세요:", 
+            options, 
+            key=f"radio_{current_idx}",
+            disabled=st.session_state.quiz_submitted
+        )
 
-        if st.button("정답 확인하기", type="primary"):
-            if user_choice == correct_answer:
+        # 1. Answer submit button
+        if not st.session_state.quiz_submitted:
+            if st.button("정답 확인하기", type="primary", use_container_width=True):
+                st.session_state.quiz_submitted = True
+                st.session_state.last_user_choice = user_choice
+                if user_choice == correct_answer:
+                    st.session_state.score += 1
+                st.rerun()
+
+        # 2. Result feedback & Next Question button
+        if st.session_state.quiz_submitted:
+            last_choice = st.session_state.get("last_user_choice", user_choice)
+            
+            if last_choice == correct_answer:
                 st.success("🎉 정답입니다! 참 잘하셨어요.")
             else:
                 st.error(f"아쉬워요! 정답은 **[{correct_answer}]** 입니다.")
                 
+                # Show wrong answer detail
                 wrong_symbol = None
                 for v in SYMBOLS_DATA.values():
-                    if v['name'] == user_choice:
+                    if v['name'] == last_choice:
                         wrong_symbol = v
                         break
                 
@@ -251,9 +274,10 @@ with tab2:
                     * **원래 용도:** {wrong_symbol['meaning']}
                     """)
 
-            if st.button("다음 문제로 ➡️"):
-                if user_choice == correct_answer:
-                    st.session_state.score += 1
+            st.markdown("---")
+            # Next button appears only after submission
+            if st.button("다음 문제로 ➡️", type="primary", use_container_width=True):
+                st.session_state.quiz_submitted = False
                 st.session_state.quiz_index += 1
                 st.rerun()
 
@@ -261,9 +285,10 @@ with tab2:
         st.balloons()
         st.success(f"🎊 퀴즈 완료! 총 {len(quiz_list)}문제 중 {st.session_state.score}문제를 맞히셨습니다!")
         
-        if st.button("🔄 퀴즈 다시 풀기"):
+        if st.button("🔄 퀴즈 다시 풀기", type="primary", use_container_width=True):
             st.session_state.quiz_index = 0
             st.session_state.score = 0
+            st.session_state.quiz_submitted = False
             items = list(SYMBOLS_DATA.values())
             random.shuffle(items)
             st.session_state.quiz_list = items

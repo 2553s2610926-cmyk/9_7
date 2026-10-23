@@ -57,16 +57,16 @@ st.markdown("""
         color: #333333;
     }
     .stButton>button {
-        font-size: 1.2rem !important;
+        font-size: 1.1rem !important;
         font-weight: bold !important;
-        padding: 12px 20px !important;
+        padding: 10px 15px !important;
         border-radius: 12px !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# Data Definition (Symbols Dictionary)
+# Data Definition (Symbols Dictionary) - Updated
 # ---------------------------------------------------------
 SYMBOLS_DATA = {
     "🔍 돋보기": {
@@ -101,7 +101,7 @@ SYMBOLS_DATA = {
         "icon": "➕",
         "name": "더하기 (메뉴/추가)",
         "metaphor": "💡 '보물상자 열기'예요!",
-        "meaning": "숨겨진 다른 기능들(지도 보내기, 선물하기, 사진 보내기 등)을 더 보여줍니다.",
+        "meaning": "숨겨진 다른 기능들(지도 보내기, 송금, 사진 보내기 등)을 더 보여줍니다.",
         "example": "대화창 왼쪽 아래 ➕를 누르면 카메라, 송금, 지도 등의 추가 메뉴가 나옵니다."
     },
     "🔒 자물쇠": {
@@ -124,6 +124,34 @@ SYMBOLS_DATA = {
         "metaphor": "💡 '확성기'예요!",
         "meaning": "소리를 켜거나, 음성 메시지를 듣거나, 보이스톡(전화)을 할 때 쓰입니다.",
         "example": "상대방이 보낸 목소리 메시지를 들으려면 스피커 모양을 터치하세요."
+    },
+    "📄 서류": {
+        "icon": "📄",
+        "name": "서류/파일 (문서 전송)",
+        "metaphor": "💡 '종이 서류철'이에요!",
+        "meaning": "한글 문서(HWP), PDF, 엑셀 파일 등 컴퓨터나 폰에 있는 문서를 공유할 때 씁니다.",
+        "example": "대화창 ➕ 메뉴에서 '파일'을 누르면 저장된 문서나 안내장을 상대방에게 보낼 수 있습니다."
+    },
+    "💸 돈": {
+        "icon": "💸",
+        "name": "지폐/원화 (송금)",
+        "metaphor": "💡 '모바일 용돈 봉투'예요!",
+        "meaning": "은행 앱을 따로 켜지 않고 대화방에서 바로 상대방에게 돈을 보낼 때 쓰는 기호입니다.",
+        "example": "경조사비나 밥값을 정산할 때 대화방 안에서 '송금' 버튼을 눌러 바로 보낼 수 있습니다."
+    },
+    "📍 위치": {
+        "icon": "📍",
+        "name": "지도/핀 (위치 공유)",
+        "metaphor": "💡 '우리 동네 나침반'이에요!",
+        "meaning": "내가 지금 있는 장소나 약속 장소의 지도를 상대방에게 보내줄 때 누릅니다.",
+        "example": "모임 장소를 설명하기 어려울 때 '지도'나 '위치' 아이콘을 눌러 약속 장소를 보내주세요."
+    },
+    "🎙️ 마이크": {
+        "icon": "🎙️",
+        "name": "마이크 (음성 메시지)",
+        "metaphor": "💡 '말하는 녹음기'예요!",
+        "meaning": "글자를 자판으로 치기 힘들 때 목소리를 직접 녹음해서 보낼 때 씁니다.",
+        "example": "마이크 버튼을 누르고 말을 한 뒤 손을 떼면 내 목소리가 음성 파일로 상대방에게 전달됩니다."
     }
 }
 
@@ -166,7 +194,7 @@ with tab1:
     """, unsafe_allow_html=True)
 
 # ---------------------------------------------------------
-# Tab 2: Quiz (Updated with Wrong Answer Explanation)
+# Tab 2: Quiz
 # ---------------------------------------------------------
 with tab2:
     st.subheader("🧩 오늘 배운 기호 퀴즈")
@@ -210,7 +238,6 @@ with tab2:
             else:
                 st.error(f"아쉬워요! 정답은 **[{correct_answer}]** 입니다.")
                 
-                # 선택한 오답 찾기 및 원래 용도 안내 추가
                 wrong_symbol = None
                 for v in SYMBOLS_DATA.values():
                     if v['name'] == user_choice:

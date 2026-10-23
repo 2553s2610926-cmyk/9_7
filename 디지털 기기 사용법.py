@@ -682,3 +682,4 @@ else:
 st.caption(
     "디지털 한걸음 | 누구나 쉽게 배우는 디지털 기기 사용법"
 )
+pip install streamlit

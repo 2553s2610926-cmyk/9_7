@@ -301,59 +301,75 @@ matching_guides = [
     if search_text.strip().casefold() in name.casefold()
 ]
 
-if not matching_guides:
-    st.warning(
-        "해당 기능을 찾지 못했어요. "
-        "다른 단어를 입력하거나 검색창을 비워 보세요."
-    )
-    st.stop()
+# 검색 결과가 없어도 직접 입력 기능을 선택할 수 있도록 유지합니다.
+function_options = matching_guides + ["기타 사유 (직접 입력)"]
+
+if not matching_guides and search_text.strip():
+    st.info("등록된 기능 중 일치하는 항목이 없어요. '기타 사유 (직접 입력)'을 선택해 직접 입력할 수 있어요.")
 
 selected_guide = st.selectbox(
     "배우고 싶은 기능을 선택하세요.",
-    matching_guides,
+    function_options,
+    key="selected_learning_function",
 )
 
-guide = guides[selected_guide]
-
 st.divider()
 
-# ------------------------------------
-# 단계별 사용법
-# ------------------------------------
-st.subheader(f"🪜 {selected_guide}")
-st.write("아래 순서대로 한 단계씩 따라 해 보세요.")
-
-completed = 0
-total = len(guide["steps"])
-
-for index, step in enumerate(guide["steps"], start=1):
-    with st.container(border=True):
-        checked = st.checkbox(
-            f"{index}단계. {step}",
-            key=f"{selected_device}_{selected_guide}_{index}",
+if selected_guide == "기타 사유 (직접 입력)":
+    custom_function = st.text_input(
+        "어떤 기능을 배우고 싶으신가요?",
+        placeholder="예: 카카오톡으로 사진 보내기, 앱 설치하기",
+        key="custom_learning_function",
+    )
+    if custom_function.strip():
+        st.subheader(f"🪜 배우고 싶은 기능: {custom_function.strip()}")
+        st.info(
+            "입력한 기능은 학습 요청으로 표시했어요. 현재 등록된 단계별 안내에는 없는 기능이라 "
+            "아직 자동으로 단계별 사용법을 보여주지는 않아요. 기기와 원하는 작업을 구체적으로 적어 두면 "
+            "도움을 요청할 때 전달하기 쉬워요."
         )
-        if checked:
-            completed += 1
+    else:
+        st.caption("배우고 싶은 기능을 입력하면 여기에 표시돼요.")
+else:
+    guide = guides[selected_guide]
 
-progress = completed / total if total else 0
+    # ------------------------------------
+    # 단계별 사용법
+    # ------------------------------------
+    st.subheader(f"🪜 {selected_guide}")
+    st.write("아래 순서대로 한 단계씩 따라 해 보세요.")
 
-st.markdown("### 📊 나의 학습 진행률")
-st.progress(progress)
-st.write(f"**{completed} / {total}단계 완료**")
+    completed = 0
+    total = len(guide["steps"])
 
-if completed == total:
-    st.success("모든 단계를 완료했어요! 잘하셨습니다. 🎉")
-elif completed > 0:
-    st.info("잘하고 있어요. 남은 단계도 천천히 연습해 보세요.")
+    for index, step in enumerate(guide["steps"], start=1):
+        with st.container(border=True):
+            checked = st.checkbox(
+                f"{index}단계. {step}",
+                key=f"{selected_device}_{selected_guide}_{index}",
+            )
+            if checked:
+                completed += 1
 
-# ------------------------------------
-# 기기별 주의사항
-# ------------------------------------
-st.divider()
+    progress = completed / total if total else 0
 
-with st.container(border=True):
-    st.subheader("💡 알아두면 좋은 팁")
-    st.write(guide["tip"])
+    st.markdown("### 📊 나의 학습 진행률")
+    st.progress(progress)
+    st.write(f"**{completed} / {total}단계 완료**")
+
+    if completed == total:
+        st.success("모든 단계를 완료했어요! 잘하셨습니다. 🎉")
+    elif completed > 0:
+        st.info("잘하고 있어요. 남은 단계도 천천히 연습해 보세요.")
+
+    # ------------------------------------
+    # 기기별 주의사항
+    # ------------------------------------
+    st.divider()
+
+    with st.container(border=True):
+        st.subheader("💡 알아두면 좋은 팁")
+        st.write(guide["tip"])
 
 # ------------------------------------
 # 도움받을 사유 선택

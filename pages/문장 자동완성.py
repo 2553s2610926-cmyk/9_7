@@ -1,426 +1,303 @@
 
-import re
-import hmac
-import hashlib
-import secrets
-from datetime import datetime, timezone
-
-import requests
 import streamlit as st
 
+# -----------------------------
+# 기본 설정
+# -----------------------------
 st.set_page_config(
-    page_title="마음 한마디",
-    page_icon="💌",
+    page_title="한마디 도우미",
+    page_icon="💬",
     layout="centered",
+    initial_sidebar_state="collapsed",
 )
 
-st.markdown("""
-<style>
-.stApp { background-color: #FFF9F0; }
-.block-container { max-width: 800px; padding-top: 1.5rem; }
-h1, h2, h3 { color: #493522; }
-div.stButton > button {
-    min-height: 52px;
-    width: 100%;
-    white-space: normal;
-    font-size: 1rem;
-    border-radius: 12px;
-}
-div[data-testid="stTextInput"] input,
-div[data-testid="stTextArea"] textarea {
-    font-size: 1.05rem;
-}
-</style>
-""", unsafe_allow_html=True)
-
-SENTENCES = [
-    ("가족", ["딸", "아들", "손주", "보고싶", "보고 싶"],
-     "잘 지내고 있니? 보고 싶구나. 시간 될 때 전화해 줘."),
-    ("가족", ["사랑", "고마워", "가족"],
-     "항상 고맙고 사랑한다. 건강하게 잘 지내자."),
-    ("전화", ["전화", "통화", "연락"],
-     "시간 괜찮을 때 전화 한 통 해 주면 좋겠어."),
-    ("병원", ["병원", "진료", "의사", "아파"],
-     "오늘 병원에 다녀오려고 해. 끝나면 다시 연락할게."),
-    ("약", ["약", "처방", "약국"],
-     "약을 먹어야 하는데 복용 방법을 다시 알려 줄 수 있니?"),
-    ("부탁", ["장보기", "마트", "시장", "부탁", "사다"],
-     "미안하지만 필요한 물건을 사다 줄 수 있을까?"),
-    ("외출", ["외출", "늦", "귀가"],
-     "지금 외출 중이야. 조금 늦을 수 있으니 걱정하지 마."),
-    ("식사", ["밥", "식사", "먹", "점심", "저녁"],
-     "밥은 먹었니? 끼니 잘 챙겨 먹고 건강하렴."),
-    ("감사", ["고마워", "감사", "도움", "덕분"],
-     "도와줘서 정말 고마워. 덕분에 큰 도움이 되었어."),
-    ("안부", ["안녕", "안부", "건강"],
-     "잘 지내고 있니? 건강 조심하고 시간 될 때 연락해 줘."),
-    ("사과", ["미안", "죄송", "사과"],
-     "내가 말을 잘못했다면 미안해. 너를 생각하는 마음은 같아."),
-    ("도움", ["도움", "급해", "위험"],
-     "지금 도움이 필요해. 가능하면 빨리 연락해 줘."),
-    ("인사", ["잘 자", "밤", "잠"],
-     "오늘도 수고 많았어. 편안한 밤 보내고 푹 쉬렴."),
-    ("인사", ["아침", "좋은 하루"],
-     "좋은 아침이야. 오늘도 건강하고 행복한 하루 보내렴."),
-]
-
-QUICK_WORDS = ["딸", "전화", "병원", "고마워", "밥", "도움"]
-
-# 모든 상태는 위젯 생성 전에 초기화합니다.
-defaults = {
-    "contacts": [],
-    "favorites": [],
-    "keyword": "",
-    "message_editor": "",
-    "recipient_label": "",
-    "notice": "",
-}
-
-for key, value in defaults.items():
-    if key not in st.session_state:
-        st.session_state[key] = value
-
-
-def normalize_phone(phone):
-    phone = re.sub(r"[\s\-()]", "", phone.strip())
-    if not re.fullmatch(r"\+?[0-9]{8,15}", phone):
-        raise ValueError("전화번호를 확인해 주세요. 예: 010-1234-5678")
-    return phone
-
-
-def find_sentences(keyword, category):
-    keyword = keyword.strip().lower()
-    results = []
-
-    for group, keywords, message in SENTENCES:
-        if category != "전체" and category != group:
-            continue
-
-        searchable = " ".join([group, message] + keywords).lower()
-        terms = keyword.split()
-
-        if not keyword or any(term in searchable for term in terms):
-            results.append((group, message))
-
-    return results
-
-
-def send_sms(phone, message):
-    # Secrets 누락도 친절한 오류로 처리합니다.
-    try:
-        api_key = st.secrets["SOLAPI_API_KEY"]
-        api_secret = st.secrets["SOLAPI_API_SECRET"]
-        from_number = st.secrets["SOLAPI_FROM_NUMBER"]
-    except Exception as exc:
-        raise RuntimeError(
-            "문자 발송 설정이 없습니다. "
-            "Streamlit Settings > Secrets에 SOLAPI 설정을 입력해 주세요."
-        ) from exc
-
-    phone = normalize_phone(phone)
-    from_number = normalize_phone(from_number)
-    message = message.strip()
-
-    if not message:
-        raise ValueError("보낼 문장을 입력해 주세요.")
-
-    date_time = (
-        datetime.now(timezone.utc)
-        .isoformat(timespec="milliseconds")
-        .replace("+00:00", "Z")
-    )
-    salt = secrets.token_hex(16)
-    signature = hmac.new(
-        str(api_secret).encode("utf-8"),
-        (date_time + salt).encode("utf-8"),
-        hashlib.sha256,
-    ).hexdigest()
-
-    headers = {
-        "Authorization": (
-            f"HMAC-SHA256 apiKey={api_key}, date={date_time}, "
-            f"salt={salt}, signature={signature}"
-        ),
-        "Content-Type": "application/json",
+# -----------------------------
+# 화면 디자인
+# -----------------------------
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-color: #F5F8FC;
     }
-
-    payload = {
-        "messages": [{
-            "to": phone,
-            "from": from_number,
-            "text": message,
-        }]
+    html, body, [class*="css"] {
+        font-family: sans-serif;
     }
+    h1 {
+        color: #174A7E;
+        font-size: 2.2rem !important;
+    }
+    h2, h3 {
+        color: #174A7E;
+    }
+    p, label, li {
+        font-size: 1.15rem !important;
+        line-height: 1.7 !important;
+    }
+    div.stButton > button,
+    div.stDownloadButton > button {
+        min-height: 52px;
+        width: 100%;
+        font-size: 1.1rem;
+        font-weight: bold;
+        border-radius: 12px;
+    }
+    div[data-baseweb="select"] {
+        font-size: 1.1rem;
+    }
+    div[data-testid="stTextInput"] input,
+    div[data-testid="stTextArea"] textarea {
+        font-size: 1.15rem;
+    }
+    .info-card {
+        background: white;
+        border: 2px solid #D8E5F3;
+        border-radius: 14px;
+        padding: 16px;
+        margin-bottom: 12px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
-    try:
-        response = requests.post(
-            "https://api.solapi.com/messages/v4/send-many/detail",
-            json=payload,
-            headers=headers,
-            timeout=20,
-        )
-    except requests.Timeout as exc:
-        raise RuntimeError(
-            "발송 요청 시간이 초과되었습니다. "
-            "중복 발송 방지를 위해 발송 내역을 확인한 뒤 재시도하세요."
-        ) from exc
-    except requests.RequestException as exc:
-        raise RuntimeError(
-            "문자 서비스에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요."
-        ) from exc
+# -----------------------------
+# 문장 제작 자료
+# -----------------------------
+SITUATIONS = {
+    "👨‍👩‍👧 가족에게 연락": {
+        "recipient": ["아들", "딸", "손주", "가족", "직접 입력"],
+        "templates": {
+            "안부": "{recipient}아, 잘 지내고 있니? 나는 잘 지내고 있어.",
+            "전화": "{recipient}아, 시간이 될 때 나에게 전화해 줘.",
+            "방문": "{recipient}아, 시간이 되면 우리 집에 한번 와 줘.",
+            "감사": "{recipient}아, 항상 챙겨 줘서 고맙다.",
+            "부탁": "{recipient}아, 부탁할 일이 있는데 연락해 줘.",
+            "식사": "{recipient}아, 밥은 잘 먹고 다니니? 건강 잘 챙기렴.",
+            "직접 만들기": "{recipient}에게 연락하고 싶어.",
+        },
+    },
+    "🏥 병원 이용": {
+        "recipient": ["의사 선생님", "간호사 선생님", "병원 직원", "직접 입력"],
+        "templates": {
+            "진료 예약": "{recipient}, 진료 예약을 하고 싶습니다.",
+            "예약 변경": "{recipient}, 진료 예약 날짜를 변경하고 싶습니다.",
+            "증상 설명": "{recipient}, 몸이 불편해서 진료를 받고 싶습니다.",
+            "약 문의": "{recipient}, 약을 어떻게 먹어야 하는지 알려 주세요.",
+            "길 안내": "{recipient}, 진료실이 어디에 있는지 알려 주세요.",
+            "도움 요청": "{recipient}, 도움이 필요합니다. 도와주세요.",
+            "직접 만들기": "{recipient}에게 문의하고 싶습니다.",
+        },
+    },
+    "🛒 일상생활": {
+        "recipient": ["가게 직원", "이웃", "지인", "직접 입력"],
+        "templates": {
+            "가격 문의": "{recipient}, 이 물건은 얼마인가요?",
+            "길 묻기": "{recipient}, {keyword}에 어떻게 가나요?",
+            "물건 찾기": "{recipient}, {keyword}를 찾고 있는데 도와주세요.",
+            "약속": "{recipient}, {keyword}에서 만나요.",
+            "감사": "{recipient}, 도와주셔서 감사합니다.",
+            "부탁": "{recipient}, 잠시 도와주실 수 있나요?",
+            "직접 만들기": "{recipient}에게 {keyword}에 대해 이야기하고 싶습니다.",
+        },
+    },
+    "🚨 긴급 연락": {
+        "recipient": ["가족", "주변 사람", "직접 입력"],
+        "templates": {
+            "도움 요청": "{recipient}, 지금 도움이 필요해요. 연락해 주세요.",
+            "몸이 아픔": "{recipient}, 몸이 많이 아파요. 도와주세요.",
+            "길을 잃음": "{recipient}, 길을 잃었어요. 제 위치를 확인하고 연락해 주세요.",
+            "위험한 상황": "{recipient}, 지금 위험한 상황이에요. 도움을 요청해 주세요.",
+            "직접 만들기": "{recipient}, 지금 도움이 필요합니다.",
+        },
+    },
+}
 
-    try:
-        result = response.json()
-    except ValueError:
-        result = {}
+# -----------------------------
+# 제목과 사용 안내
+# -----------------------------
+st.title("💬 한마디 도우미")
+st.markdown("### 하고 싶은 말을 쉽고 간단하게 만들어요!")
+st.info(
+    "사용 방법: ① 상황 선택 → ② 상대방과 단어 선택 "
+    "→ ③ 문장 만들기 → ④ 완성된 문장 복사하기"
+)
 
-    if not response.ok:
-        detail = (
-            result.get("errorMessage")
-            or result.get("message")
-            or "문자 서비스에서 요청을 거부했습니다."
-        )
-        code = result.get("errorCode", "")
-        raise RuntimeError(
-            f"발송 실패 (HTTP {response.status_code}, {code}): {detail}"
-        )
-
-    failed = result.get("failedMessageList", [])
-    if failed:
-        item = failed[0]
-        reason = (
-            item.get("statusMessage")
-            or item.get("errorMessage")
-            or item.get("reason")
-            or "발송에 실패했습니다."
-        )
-        raise RuntimeError(str(reason))
-
-    return result
-
-
-# --------------------------------------------------
-# 1. 연락처 관리
-# --------------------------------------------------
-st.title("💌 마음 한마디")
-st.write("받는 사람을 선택하고, 하고 싶은 말을 쉽게 문자로 보내세요.")
-
-st.header("1. 📇 연락처")
-
-with st.expander("새 연락처 등록", expanded=not st.session_state.contacts):
-    with st.form("add_contact_form", clear_on_submit=True):
-        name_input = st.text_input("이름", placeholder="예: 우리 딸")
-        phone_input = st.text_input(
-            "전화번호", placeholder="예: 010-1234-5678"
-        )
-        add_clicked = st.form_submit_button(
-            "연락처 저장", use_container_width=True
-        )
-
-    if add_clicked:
-        try:
-            name = name_input.strip()
-            phone = normalize_phone(phone_input)
-
-            if not name:
-                st.error("이름을 입력해 주세요.")
-            elif any(
-                c["phone"] == phone for c in st.session_state.contacts
-            ):
-                st.error("이미 저장된 전화번호입니다.")
-            else:
-                st.session_state.contacts.append({
-                    "name": name,
-                    "phone": phone,
-                })
-                st.session_state.notice = f"{name} 연락처를 저장했습니다."
-                st.rerun()
-        except ValueError as exc:
-            st.error(str(exc))
-
-if st.session_state.notice:
-    st.success(st.session_state.notice)
-    st.session_state.notice = ""
-
-# 연락처 삭제 동작은 문장 입력창 생성 전에 처리합니다.
-if st.session_state.contacts:
-    st.subheader("저장된 연락처")
-
-    for i, contact in enumerate(st.session_state.contacts):
-        left, right = st.columns([4, 1])
-        with left:
-            st.write(f"**{contact['name']}** · {contact['phone']}")
-        with right:
-            if st.button("삭제", key=f"delete_contact_{i}"):
-                st.session_state.contacts.pop(i)
-                st.rerun()
-
-    contact_labels = [
-        f"{c['name']} ({c['phone']})"
-        for c in st.session_state.contacts
-    ]
-
-    # 삭제된 연락처가 선택되어 있어도 안전하게 기본값을 선택합니다.
-    if st.session_state.recipient_label not in contact_labels:
-        st.session_state.recipient_label = contact_labels[0]
-
-    selected_label = st.selectbox(
-        "문자를 받을 사람",
-        contact_labels,
-        key="recipient_label",
+with st.expander("📖 처음 사용하시나요? 조작 방법 보기"):
+    st.markdown(
+        """
+        1. **상황 선택**에서 가족, 병원, 일상, 긴급 연락 중 하나를 고릅니다.
+        2. **누구에게 보낼까요?**에서 상대방을 선택합니다.
+        3. **어떤 말을 하고 싶으세요?**에서 전달할 내용을 고릅니다.
+        4. **문장 만들기**를 누르면 문장이 완성됩니다.
+        5. 완성된 문장을 확인하고 필요하면 직접 고칩니다.
+        6. 아래 문장 복사 안내를 따라 메시지에 붙여넣습니다.
+        """
     )
-    recipient = st.session_state.contacts[contact_labels.index(selected_label)]
-else:
-    recipient = None
-    st.info("문자를 보내려면 먼저 연락처를 등록해 주세요.")
 
-
-# --------------------------------------------------
-# 2. 키워드와 문장 선택
-# --------------------------------------------------
 st.divider()
-st.header("2. ✏️ 문장 자동완성")
 
-cols = st.columns(3)
-for i, word in enumerate(QUICK_WORDS):
-    with cols[i % 3]:
-        if st.button(word, key=f"quick_{i}"):
-            st.session_state.keyword = word
+# -----------------------------
+# 입력 화면
+# -----------------------------
+st.header("1. 어떤 상황인가요?")
+
+situation = st.selectbox(
+    "상황을 선택하세요",
+    list(SITUATIONS.keys()),
+    key="situation",
+)
+
+data = SITUATIONS[situation]
+
+st.header("2. 누구에게, 어떤 말을 할까요?")
+
+recipient_option = st.selectbox(
+    "누구에게 보낼까요?",
+    data["recipient"],
+    key="recipient_option",
+)
+
+recipient = recipient_option
+if recipient_option == "직접 입력":
+    recipient = st.text_input(
+        "상대방을 입력하세요",
+        placeholder="예: 관리사무소 직원",
+        max_chars=40,
+    ).strip()
+
+st.markdown("**어떤 말을 하고 싶으세요?**")
+
+message_type = st.selectbox(
+    "전달할 내용 선택",
+    list(data["templates"].keys()),
+    key="message_type",
+)
+
+keyword = ""
+if situation == "🛒 일상생활" or message_type == "직접 만들기":
+    keyword = st.text_input(
+        "추가할 단어 (선택)",
+        placeholder="예: 시장, 내일, 전화",
+        max_chars=80,
+    ).strip()
+
+extra = st.text_input(
+    "더 넣고 싶은 말 (선택)",
+    placeholder="예: 오후에, 조금 늦게",
+    max_chars=100,
+)
+
+st.caption("입력하지 않아도 기본 문장을 만들 수 있어요.")
+
+# -----------------------------
+# 문장 생성
+# -----------------------------
+def make_sentence(situation, recipient, message_type, keyword, extra):
+    """선택한 상황에 맞는 문장을 안전하게 생성합니다."""
+    data = SITUATIONS.get(situation)
+    if not data:
+        raise ValueError("상황을 찾을 수 없습니다.")
+
+    template = data["templates"].get(message_type)
+    if not template:
+        raise ValueError("문장 유형을 찾을 수 없습니다.")
+
+    safe_recipient = recipient.strip() if recipient else ""
+    if not safe_recipient:
+        safe_recipient = "상대방"
+
+    sentence = template.format(
+        recipient=safe_recipient,
+        keyword=keyword.strip() if keyword else "그곳",
+    )
+
+    if extra.strip():
+        sentence = sentence.rstrip("。.!? ") + ". " + extra.strip()
+        if sentence[-1] not in ".!?":
+            sentence += "."
+
+    return sentence
+
+
+if "generated_sentence" not in st.session_state:
+    st.session_state.generated_sentence = ""
+
+if st.button("✨ 문장 만들기", type="primary", use_container_width=True):
+    if recipient_option == "직접 입력" and not recipient:
+        st.warning("상대방을 입력해 주세요.")
+    else:
+        try:
+            st.session_state.generated_sentence = make_sentence(
+                situation, recipient, message_type, keyword, extra
+            )
             st.rerun()
+        except (ValueError, KeyError, AttributeError):
+            st.error("문장을 만드는 중 문제가 발생했어요. 다시 선택해 주세요.")
+        except Exception:
+            st.error("일시적인 오류가 발생했어요. 다시 시도해 주세요.")
 
-keyword = st.text_input(
-    "주요 키워드",
-    key="keyword",
-    placeholder="예: 딸, 병원, 전화, 고마워",
-)
-
-categories = ["전체"] + list(dict.fromkeys(x[0] for x in SENTENCES))
-category = st.selectbox("상황 선택", categories)
-
-results = find_sentences(keyword, category)
-if not results:
-    st.info("일치하는 문장이 없습니다. 기본 문장을 보여 드립니다.")
-    results = [
-        ("안부", "잘 지내고 있니? 시간 될 때 연락해 줘."),
-        ("부탁", "미안하지만 잠시 도와줄 수 있을까?"),
-    ]
-
-st.caption("마음에 드는 문장을 누르면 아래 입력창에 나타납니다.")
-
-for i in range(0, min(len(results), 12), 2):
-    cols = st.columns(2)
-
-    for offset, col in enumerate(cols):
-        idx = i + offset
-        if idx >= min(len(results), 12):
-            continue
-
-        group, text = results[idx]
-        with col:
-            st.caption(group)
-            if st.button(text, key=f"sentence_{idx}"):
-                # 이 입력 위젯은 아직 생성되지 않았으므로 안전합니다.
-                st.session_state.message_editor = text
-                st.rerun()
-
-
-# --------------------------------------------------
-# 3. 즐겨찾기 선택: 입력 위젯 생성 전에 실행
-# --------------------------------------------------
-if st.session_state.favorites:
-    with st.expander("⭐ 즐겨찾기 문장"):
-        for i, favorite in enumerate(st.session_state.favorites):
-            st.write(favorite)
-
-            left, right = st.columns(2)
-            with left:
-                if st.button("이 문장 사용", key=f"use_favorite_{i}"):
-                    st.session_state.message_editor = favorite
-                    st.rerun()
-
-            with right:
-                if st.button("삭제", key=f"remove_favorite_{i}"):
-                    st.session_state.favorites.pop(i)
-                    st.rerun()
-
-
-# --------------------------------------------------
-# 4. 최종 문장 입력창
-# 위쪽의 선택 동작이 모두 끝난 뒤 생성합니다.
-# --------------------------------------------------
+# -----------------------------
+# 완성된 문장
+# -----------------------------
 st.divider()
-st.header("3. 📝 최종 문장 확인")
+st.header("3. 완성된 문장")
 
-st.text_area(
-    "보낼 문장을 확인하고 수정하세요.",
-    key="message_editor",
-    height=140,
-    placeholder="위에서 문장을 선택하거나 직접 입력하세요.",
-)
+if st.session_state.generated_sentence:
+    st.success("문장이 완성되었어요! 아래 내용을 확인하세요.")
 
-current_message = st.session_state.message_editor.strip()
+    edited_sentence = st.text_area(
+        "필요하면 문장을 직접 수정하세요.",
+        value=st.session_state.generated_sentence,
+        height=150,
+        key="edited_sentence",
+        help="글자를 누르고 수정할 수 있어요.",
+    )
 
-if st.button("⭐ 현재 문장을 즐겨찾기에 저장", use_container_width=True):
-    if current_message:
-        if current_message not in st.session_state.favorites:
-            st.session_state.favorites.append(current_message)
-        st.success("즐겨찾기에 저장했습니다.")
-    else:
-        st.warning("먼저 문장을 선택하거나 입력해 주세요.")
+    st.markdown("**📋 복사할 문장**")
+    st.code(edited_sentence, language=None)
 
+    st.caption(
+        "복사 방법: 위 문장 상자의 오른쪽 위에 있는 복사 아이콘을 누르세요. "
+        "그다음 카카오톡 등의 입력창을 길게 누르고 '붙여넣기'를 선택하세요."
+    )
 
-# --------------------------------------------------
-# 5. 실제 SMS 발송
-# --------------------------------------------------
-st.divider()
-st.header("4. 📩 문자 보내기")
+    st.download_button(
+        label="📄 문장을 파일로 저장하기",
+        data=edited_sentence,
+        file_name="완성된_문장.txt",
+        mime="text/plain",
+        use_container_width=True,
+    )
 
-if recipient:
-    st.write(f"**받는 사람:** {recipient['name']}")
-    st.write(f"**전화번호:** {recipient['phone']}")
+    if st.button("🔄 처음부터 다시 만들기", use_container_width=True):
+        st.session_state.generated_sentence = ""
+        st.rerun()
 else:
-    st.warning("먼저 연락처를 등록하고 선택해 주세요.")
+    st.markdown(
+        """
+        <div class="info-card">
+        <p>아직 완성된 문장이 없어요.</p>
+        <p>위에서 상황과 전달할 내용을 선택한 다음
+        <b>문장 만들기</b> 버튼을 눌러 주세요.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-st.warning("발송에는 문자 서비스 이용료가 발생할 수 있습니다.")
+st.divider()
 
-confirmed = st.checkbox(
-    "받는 사람과 문장을 확인했고, 문자 발송에 동의합니다."
+st.markdown(
+    """
+    <div class="info-card">
+    <h3>💙 기억해 주세요</h3>
+    <p>급하게 도움이 필요한 경우에는 이 앱만 사용하지 말고
+    주변 사람이나 119 등 적절한 긴급 도움을 요청하세요.</p>
+    <p>이 앱은 사용자가 선택한 내용으로 문장을 만드는 도구입니다.
+    실제 메시지는 직접 확인한 뒤 전송하세요.</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
 
-if st.button("📩 실제 문자 발송", type="primary", use_container_width=True):
-    if not recipient:
-        st.error("먼저 연락처를 등록해 주세요.")
-    elif not current_message:
-        st.error("보낼 문장을 선택하거나 입력해 주세요.")
-    elif not confirmed:
-        st.error("발송 확인란에 체크해 주세요.")
-    else:
-        try:
-            with st.spinner("문자 발송 요청 중입니다..."):
-                result = send_sms(
-                    recipient["phone"],
-                    current_message,
-                )
-
-            st.success(
-                "문자 발송 요청이 접수되었습니다. "
-                "최종 수신 여부는 문자 서비스의 발송 내역에서 확인해 주세요."
-            )
-
-            group_info = result.get("groupInfo", {})
-            if group_info.get("groupId"):
-                st.caption(f"발송 그룹 ID: {group_info['groupId']}")
-
-        except (ValueError, RuntimeError) as exc:
-            st.error(str(exc))
-        except Exception as exc:
-            # 원인을 파악할 수 있도록 오류 유형을 표시합니다.
-            st.error(
-                f"예상하지 못한 오류가 발생했습니다 ({type(exc).__name__}). "
-                "앱 로그와 문자 서비스 발송 내역을 확인해 주세요."
-            )
-
-st.caption(
-    "연락처와 즐겨찾기는 현재 세션에 저장됩니다. "
-    "문자 발송 요청 접수가 실제 수신 완료를 의미하지는 않습니다."
-)
+st.caption("한마디 도우미 | 누구나 쉽게 소통할 수 있도록")

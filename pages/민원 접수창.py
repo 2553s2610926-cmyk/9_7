@@ -20,7 +20,8 @@ if not api_key:
 
 try:
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-2.5-flash-lite')
+    # 모델 호환성을 위해 gemini-1.5-flash 또는 gemini-2.5-flash-lite 지정
+    model = genai.GenerativeModel('gemini-1.5-flash')
 except Exception as e:
     st.error(f"API 초기화 중 오류가 발생했습니다: {e}")
     st.stop()
@@ -47,17 +48,11 @@ def analyze_complaint(title, content):
     }}
     """
     try:
-        response = model.generate_content(prompt)
-        text = response.text.strip()
-        # 마크다운 코드 블록 제거
-        if text.startswith("```json"):
-            text = text[7:]
-        if text.startswith("```"):
-            text = text[3:]
-        if text.endswith("```"):
-            text = text[:-3]
-        
-        result = json.loads(text.strip())
+        response = model.generate_content(
+            prompt,
+            generation_config={"response_mime_type": "application/json"}
+        )
+        result = json.loads(response.text)
         return result
     except Exception as e:
         # AI 예외 처리 시 기본값 반환
@@ -219,8 +214,5 @@ with tab3:
                 if st.button("답변 저장하기", key=f"btn_{item['id']}"):
                     item["final_reply"] = reply_text
                     item["status"] = new_status
-                    st.success("민원 처리 내역이 업데이트되었습니다")
-pip install streamlit
-python-3.14
-streamlit
-google-generativeai
+                    st.success("민원 처리 내역이 업데이트되었습니다.")
+                    st.rerun()

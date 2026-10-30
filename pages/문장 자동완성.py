@@ -1,59 +1,49 @@
 
 import streamlit as st
 import re
+import json
 from urllib.parse import quote
 
-# =====================================
+# ==================================
 # 기본 설정
-# =====================================
+# ==================================
 st.set_page_config(
     page_title="한마디 도우미",
     page_icon="💙",
     layout="centered"
 )
 
-# =====================================
+# ==================================
 # 디자인
-# =====================================
+# ==================================
 st.markdown("""
 <style>
 .stApp {
-    background: linear-gradient(180deg, #D8F0FF, #F3FAFF, #FFFFFF);
+    background: linear-gradient(180deg,#D8F0FF,#F3FAFF,#FFFFFF);
 }
 .block-container {
     max-width: 650px;
     padding-top: 2rem;
 }
-h1, h2, h3 {
+h1,h2,h3 {
     color: #285D86 !important;
 }
 .hero {
     background: #D5EDFF;
-    padding: 28px 15px;
+    padding: 25px 15px;
     border-radius: 25px;
     text-align: center;
-    margin-bottom: 20px;
-}
-.hero h1 {
-    font-size: 32px;
-}
-.hero p {
-    color: #507895;
 }
 div.stButton > button,
 div.stDownloadButton > button {
     width: 100%;
     min-height: 50px;
     border-radius: 14px;
-    background-color: #DDF1FF;
+    background: #DDF1FF;
     color: #285D86;
     border: 1px solid #B9DDF4;
-    font-size: 17px;
+    font-size: 16px;
     font-weight: bold;
-}
-div.stButton > button:hover {
-    background-color: #C5E7FC;
-    color: #174B73;
 }
 div[data-testid="stTextInput"] input,
 div[data-testid="stTextArea"] textarea {
@@ -63,11 +53,15 @@ div[data-testid="stTextArea"] textarea {
 </style>
 """, unsafe_allow_html=True)
 
-# =====================================
+# ==================================
 # 데이터 초기화
-# =====================================
-if "contacts" not in st.session_state:
-    st.session_state["contacts"] = {}
+# 기존 contacts와 다른 이름 사용
+# ==================================
+if "contact_book" not in st.session_state:
+    st.session_state["contact_book"] = {}
+
+if not isinstance(st.session_state["contact_book"], dict):
+    st.session_state["contact_book"] = {}
 
 if "generated_sentence" not in st.session_state:
     st.session_state["generated_sentence"] = ""
@@ -75,9 +69,9 @@ if "generated_sentence" not in st.session_state:
 if "edited_sentence" not in st.session_state:
     st.session_state["edited_sentence"] = ""
 
-# =====================================
+# ==================================
 # 문장 자료
-# =====================================
+# ==================================
 SITUATIONS = {
     "👨‍👩‍👧 가족": {
         "안부": "{recipient}아, 잘 지내고 있니? 나는 잘 지내고 있어.",
@@ -112,79 +106,78 @@ SITUATIONS = {
     }
 }
 
-# =====================================
-# 제목
-# =====================================
+# ==================================
+# 첫 화면
+# ==================================
 st.markdown("""
 <div class="hero">
     <div style="font-size:40px;">💙</div>
-    <h1>한마디 도우미</h1>
-    <p>소중한 사람에게 마음을 쉽게 전해 보세요.</p>
+    <div style="font-size:32px;font-weight:bold;color:#285D86;">
+        한마디 도우미
+    </div>
+    <p style="color:#507895;">
+        소중한 사람에게 마음을 쉽게 전해 보세요.
+    </p>
 </div>
 """, unsafe_allow_html=True)
 
-with st.expander("📖 사용 방법"):
+with st.expander("📖 간단한 사용 방법"):
     st.write("""
-    1. 연락처와 전화번호를 저장합니다.
-    2. 문자 받을 사람을 선택합니다.
-    3. 상황과 전달할 내용을 선택합니다.
-    4. 완성된 문장을 수정합니다.
-    5. 문자 앱을 열어 직접 전송합니다.
+    1. 이름과 전화번호를 저장해요.
+    2. 문자 받을 사람을 선택해요.
+    3. 상황과 전달할 내용을 선택해요.
+    4. 완성된 문장을 원하는 대로 수정해요.
+    5. 문자 앱을 열어 직접 보내요.
     """)
 
-# =====================================
-# 1. 연락처 저장
-# =====================================
+st.divider()
+
+# ==================================
+# 1. 연락처 등록
+# ==================================
 st.header("👤 나의 연락처")
 st.write("자주 연락하는 사람을 등록해 보세요.")
 
-with st.form("save_contact_form"):
-    input_name = st.text_input(
+with st.form("contact_form", clear_on_submit=True):
+    name = st.text_input(
         "이름",
         placeholder="예: 우리 아들"
     )
 
-    input_phone = st.text_input(
+    phone = st.text_input(
         "전화번호",
         placeholder="예: 010-1234-5678"
     )
 
-    save_button = st.form_submit_button(
+    save = st.form_submit_button(
         "＋ 연락처 저장",
         use_container_width=True
     )
 
-if save_button:
-    name = input_name.strip()
-    phone = input_phone.strip()
-
-    # 숫자와 +만 남겨 전화번호 검사
-    cleaned_phone = re.sub(r"[\s()-]", "", phone)
+if save:
+    name = name.strip()
+    phone = re.sub(r"[\s()-]", "", phone.strip())
 
     if not name:
         st.error("이름을 입력해 주세요.")
 
-    elif not re.fullmatch(r"\+?\d{8,15}", cleaned_phone):
+    elif not re.fullmatch(r"\+?\d{8,15}", phone):
         st.error("전화번호를 확인해 주세요. 예: 010-1234-5678")
 
-    elif name in st.session_state["contacts"]:
+    elif name in st.session_state["contact_book"]:
         st.warning("이미 저장된 이름이에요.")
 
     else:
-        try:
-            st.session_state["contacts"][name] = cleaned_phone
-            st.success(name + " 연락처가 저장되었어요!")
-            st.rerun()
+        st.session_state["contact_book"][name] = phone
+        st.success(f"{name} 연락처가 저장되었어요!")
+        st.rerun()
 
-        except Exception as e:
-            st.error("저장 중 문제가 발생했어요: " + str(e))
-
-# =====================================
-# 2. 저장된 연락처 목록
-# =====================================
+# ==================================
+# 2. 연락처 목록 및 삭제
+# ==================================
 st.subheader("📋 저장된 연락처")
 
-contacts = st.session_state["contacts"]
+contacts = st.session_state["contact_book"]
 
 if contacts:
     for person, number in list(contacts.items()):
@@ -195,41 +188,100 @@ if contacts:
             st.caption(number)
 
         with col2:
-            if st.button("삭제", key="delete_" + person):
-                del st.session_state["contacts"][person]
+            if st.button("삭제", key="del_" + person):
+                del st.session_state["contact_book"][person]
                 st.rerun()
 else:
-    st.info("아직 저장된 연락처가 없어요.")
+    st.info("저장된 연락처가 없어요.")
+
+# ==================================
+# 3. 연락처 백업 및 복원
+# ==================================
+with st.expander("📁 연락처 백업 및 복원"):
+    if contacts:
+        backup = json.dumps(
+            contacts,
+            ensure_ascii=False,
+            indent=2
+        )
+
+        st.download_button(
+            "📥 연락처 백업하기",
+            data=backup,
+            file_name="연락처_백업.json",
+            mime="application/json",
+            use_container_width=True
+        )
+
+    uploaded = st.file_uploader(
+        "백업 파일 불러오기",
+        type=["json"]
+    )
+
+    if uploaded is not None:
+        if st.button("연락처 복원하기"):
+            try:
+                data = json.load(uploaded)
+
+                if not isinstance(data, dict) or len(data) > 200:
+                    raise ValueError()
+
+                valid = {}
+
+                for person, number in data.items():
+                    cleaned = re.sub(
+                        r"[\s()-]",
+                        "",
+                        str(number)
+                    )
+
+                    if (
+                        isinstance(person, str)
+                        and person.strip()
+                        and len(person) <= 40
+                        and re.fullmatch(r"\+?\d{8,15}", cleaned)
+                    ):
+                        valid[person.strip()] = cleaned
+
+                if not valid:
+                    raise ValueError()
+
+                st.session_state["contact_book"].update(valid)
+                st.success("연락처를 불러왔어요!")
+                st.rerun()
+
+            except Exception:
+                st.error("백업 파일을 확인해 주세요.")
 
 st.divider()
 
-# 연락처가 없으면 이후 단계 진행 중단
-if not st.session_state["contacts"]:
-    st.info("연락처를 먼저 저장해 주세요.")
+# ==================================
+# 연락처가 없으면 여기서 중단
+# ==================================
+if not st.session_state["contact_book"]:
+    st.info("먼저 연락처를 저장해 주세요.")
     st.stop()
 
-# =====================================
-# 3. 문자 받을 사람 선택
-# =====================================
+# ==================================
+# 4. 받을 사람 선택
+# ==================================
 st.header("💌 문자 받을 사람")
-
-contact_names = list(st.session_state["contacts"].keys())
 
 selected_name = st.selectbox(
     "누구에게 보낼까요?",
-    contact_names
+    list(st.session_state["contact_book"].keys())
 )
 
-selected_phone = st.session_state["contacts"][selected_name]
+selected_phone = st.session_state["contact_book"][selected_name]
 
 st.success("선택한 사람: " + selected_name)
 st.caption("전화번호: " + selected_phone)
 
 st.divider()
 
-# =====================================
-# 4. 문장 만들기
-# =====================================
+# ==================================
+# 5. 문장 만들기
+# ==================================
 st.header("✏️ 전하고 싶은 말")
 
 situation = st.selectbox(
@@ -244,17 +296,21 @@ message_type = st.selectbox(
 
 keyword = st.text_input(
     "추가할 단어 (선택)",
-    placeholder="예: 시장, 내일, 오후 3시"
+    placeholder="예: 시장, 내일, 오후 3시",
+    max_chars=100
 )
 
 extra = st.text_input(
     "더 넣고 싶은 말 (선택)",
-    placeholder="예: 조금 늦을 것 같아요"
+    placeholder="예: 조금 늦을 것 같아요",
+    max_chars=100
 )
 
-if st.button("✨ 문장 만들기", type="primary",
-             use_container_width=True):
-
+if st.button(
+    "✨ 문장 만들기",
+    type="primary",
+    use_container_width=True
+):
     try:
         template = SITUATIONS[situation][message_type]
 
@@ -273,36 +329,31 @@ if st.button("✨ 문장 만들기", type="primary",
 
         st.rerun()
 
-    except Exception as e:
-        st.error("문장 생성 오류: " + str(e))
+    except Exception:
+        st.error("문장을 만드는 중 오류가 발생했어요.")
 
 st.divider()
 
-# =====================================
-# 5. 완성된 문장 수정
-# =====================================
+# ==================================
+# 6. 문장 수정 및 문자 보내기
+# ==================================
 st.header("📝 완성된 문장")
 
 if st.session_state["generated_sentence"]:
 
     st.success("문장이 완성되었어요!")
 
-    # 직접 수정 가능한 문장 입력창
-    edited = st.text_area(
-        "원하는 대로 수정해 보세요.",
+    st.text_area(
+        "문장을 자유롭게 수정해 보세요.",
         key="edited_sentence",
-        height=160,
+        height=150,
         max_chars=2000
     )
 
-    final_message = edited.strip()
-
-    # =================================
-    # 6. 문자 앱 연결
-    # =================================
-    st.subheader("📩 문자 보내기")
+    final_message = st.session_state["edited_sentence"].strip()
 
     if final_message:
+        st.subheader("📩 문자 보내기")
 
         st.write("최종 전송 내용")
         st.code(final_message, language=None)
@@ -322,16 +373,11 @@ if st.session_state["generated_sentence"]:
             f"""
             <a href="{android_link}" target="_self"
             style="
-            display:block;
-            text-align:center;
-            background:#79C7F2;
-            color:#174B73;
-            padding:16px;
-            border-radius:15px;
-            font-size:18px;
-            font-weight:bold;
-            text-decoration:none;
-            margin:10px 0;">
+            display:block;text-align:center;
+            background:#79C7F2;color:#174B73;
+            padding:16px;border-radius:15px;
+            font-size:18px;font-weight:bold;
+            text-decoration:none;margin:10px 0;">
             📩 문자 앱 열기
             </a>
             """,
@@ -342,16 +388,11 @@ if st.session_state["generated_sentence"]:
             f"""
             <a href="{iphone_link}" target="_self"
             style="
-            display:block;
-            text-align:center;
-            background:#D8F0FF;
-            color:#174B73;
-            padding:16px;
-            border-radius:15px;
-            font-size:18px;
-            font-weight:bold;
-            text-decoration:none;
-            margin:10px 0;">
+            display:block;text-align:center;
+            background:#D8F0FF;color:#174B73;
+            padding:16px;border-radius:15px;
+            font-size:18px;font-weight:bold;
+            text-decoration:none;margin:10px 0;">
             📱 아이폰 문자 앱 열기
             </a>
             """,
@@ -374,18 +415,16 @@ if st.session_state["generated_sentence"]:
     else:
         st.warning("문장을 입력해 주세요.")
 
-    if st.button("🔄 새 문장 만들기",
-                 use_container_width=True):
+    if st.button("🔄 새 문장 만들기", use_container_width=True):
         st.session_state["generated_sentence"] = ""
-        st.session_state["edited_sentence"] = ""
         st.rerun()
 
 else:
     st.info("위에서 문장 만들기를 눌러 주세요.")
 
-# =====================================
+# ==================================
 # 마지막 안내
-# =====================================
+# ==================================
 st.divider()
 
 st.markdown("""
@@ -394,7 +433,7 @@ st.markdown("""
     <b style="color:#285D86;font-size:18px;">
         누구나 쉽게 소통할 수 있도록
     </b>
-    <p>한마디 도우미</p>
+    <p style="color:#507895;">한마디 도우미</p>
 </div>
 """, unsafe_allow_html=True)
 

@@ -222,3 +222,5 @@ with tab3:
                     st.success("민원 처리 내역이 업데이트되었습니다")
 pip install streamlit
 python-3.14
+streamlit
+google-generativeai

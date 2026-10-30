@@ -221,4 +221,4 @@ with tab3:
                     item["status"] = new_status
                     st.success("민원 처리 내역이 업데이트되었습니다")
 pip install streamlit
-python-3.11
+python-3.14

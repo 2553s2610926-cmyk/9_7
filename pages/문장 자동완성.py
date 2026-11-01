@@ -15,8 +15,6 @@ st.set_page_config(
 # -------------------------
 st.markdown("""
 <style>
-
-/* 전체 화면 */
 .stApp,
 [data-testid="stAppViewContainer"],
 [data-testid="stMain"] {
@@ -24,19 +22,20 @@ st.markdown("""
     color: #000000 !important;
 }
 
-/* 왼쪽 사이드바 */
+header[data-testid="stHeader"] {
+    background: transparent !important;
+}
+
 [data-testid="stSidebar"],
 [data-testid="stSidebar"] > div {
     background: #DDF2FF !important;
     color: #000000 !important;
 }
 
-/* 사이드바 내부 */
 [data-testid="stSidebar"] * {
     color: #000000 !important;
 }
 
-/* 페이지 메뉴 */
 [data-testid="stSidebarNav"] {
     background: #DDF2FF !important;
 }
@@ -55,13 +54,11 @@ st.markdown("""
     background: #BDE8FF !important;
 }
 
-/* 기본 글자 */
 html, body, p, label, span, li, small,
-h1, h2, h3, h4, strong, div {
+h1, h2, h3, h4, strong {
     color: #000000 !important;
 }
 
-/* 글자 크기 */
 p, label, li {
     font-size: 17px !important;
 }
@@ -81,14 +78,12 @@ h3 {
     font-weight: 700 !important;
 }
 
-/* 본문 영역 */
 .main .block-container {
     padding-top: 2rem;
     padding-bottom: 3rem;
     max-width: 800px;
 }
 
-/* 입력창 */
 .stTextInput input,
 .stTextArea textarea,
 [data-baseweb="input"] input,
@@ -101,14 +96,12 @@ h3 {
     box-shadow: none !important;
 }
 
-/* 입력창 안내 문구 */
 input::placeholder,
 textarea::placeholder {
     color: #777777 !important;
     opacity: 1 !important;
 }
 
-/* 선택창 */
 [data-baseweb="select"] > div {
     background: #FFFFFF !important;
     color: #000000 !important;
@@ -118,7 +111,6 @@ textarea::placeholder {
     box-shadow: none !important;
 }
 
-/* 선택창 글자 */
 [data-baseweb="select"] *,
 [data-baseweb="select"] svg {
     color: #000000 !important;
@@ -126,7 +118,6 @@ textarea::placeholder {
     font-size: 17px !important;
 }
 
-/* 선택 목록 */
 [data-baseweb="popover"],
 [data-baseweb="menu"],
 [data-baseweb="popover"] ul,
@@ -137,7 +128,6 @@ textarea::placeholder {
     box-shadow: none !important;
 }
 
-/* 선택 목록 항목 */
 [role="option"] {
     background: #FFFFFF !important;
     color: #000000 !important;
@@ -151,7 +141,6 @@ textarea::placeholder {
     color: #000000 !important;
 }
 
-/* 버튼 */
 .stButton button,
 .stDownloadButton button,
 button[kind] {
@@ -166,7 +155,6 @@ button[kind] {
     box-shadow: none !important;
 }
 
-/* 버튼 내부 */
 .stButton button *,
 .stDownloadButton button * {
     color: #000000 !important;
@@ -174,7 +162,6 @@ button[kind] {
     font-size: 17px !important;
 }
 
-/* 버튼 마우스 올림 */
 .stButton button:hover,
 .stDownloadButton button:hover {
     background: #A9DFFF !important;
@@ -183,16 +170,6 @@ button[kind] {
     box-shadow: none !important;
 }
 
-/* 버튼 포커스 */
-.stButton button:focus,
-.stDownloadButton button:focus {
-    background: #A9DFFF !important;
-    color: #000000 !important;
-    outline: 2px solid #A9DFFF !important;
-    box-shadow: none !important;
-}
-
-/* 안내창 */
 [data-testid="stAlert"] {
     background: #FFFFFF !important;
     color: #000000 !important;
@@ -200,7 +177,6 @@ button[kind] {
     border-radius: 12px !important;
 }
 
-/* 펼치기 메뉴 */
 [data-testid="stExpander"],
 details {
     background: #FFFFFF !important;
@@ -209,7 +185,6 @@ details {
     border-radius: 12px !important;
 }
 
-/* 파일 업로드 */
 [data-testid="stFileUploader"],
 [data-testid="stFileUploader"] section {
     background: #FFFFFF !important;
@@ -218,33 +193,12 @@ details {
     border-radius: 12px !important;
 }
 
-/* 구분선 */
 hr {
     border-color: #B9E5FA !important;
 }
 
-/* 표 */
-[data-testid="stTable"],
-[data-testid="stDataFrame"] {
-    background: #FFFFFF !important;
-    color: #000000 !important;
-}
-
-/* 체크박스와 라디오 */
-[data-testid="stCheckbox"],
-[data-testid="stRadio"] {
-    color: #000000 !important;
-    font-size: 17px !important;
-}
-
-/* 링크 */
 a {
     color: #000000 !important;
-}
-
-/* 하단 여백 */
-footer {
-    background: transparent !important;
 }
 
 </style>
@@ -267,10 +221,207 @@ if "edited_sentence" not in st.session_state:
     st.session_state["edited_sentence"] = ""
 
 
-# 새 문장 버튼을 위한 초기화 함수
 def reset_sentence():
     st.session_state["generated_sentence"] = ""
     st.session_state["edited_sentence"] = ""
+
+
+# -------------------------
+# 문장 자동완성 데이터
+# -------------------------
+sentence_rules = {
+    "가족에게 연락하기": [
+        (
+            ["늦", "지각", "늦어"],
+            "생각보다 늦어질 것 같아요. 조금만 기다려 주세요."
+        ),
+        (
+            ["도착", "왔어요", "도착했"],
+            "목적지에 잘 도착했어요. 걱정하지 마세요."
+        ),
+        (
+            ["병원", "진료"],
+            "병원에 도착했어요. 진료가 끝나면 다시 연락할게요."
+        ),
+        (
+            ["식사", "밥", "먹"],
+            "식사는 잘했어요. 걱정하지 않으셔도 돼요."
+        ),
+        (
+            ["전화", "통화"],
+            "지금은 통화하기 어려워요. 나중에 다시 전화할게요."
+        ),
+        (
+            ["고마워", "감사"],
+            "항상 신경 써 줘서 고마워요. 덕분에 큰 힘이 돼요."
+        ),
+        (
+            ["사랑", "보고 싶"],
+            "늘 고맙고 보고 싶어요. 조만간 만나요."
+        ),
+        (
+            ["걱정"],
+            "걱정하지 마세요. 저는 잘 지내고 있어요."
+        )
+    ],
+
+    "병원 관련 연락": [
+        (
+            ["예약", "진료 예약"],
+            "진료 예약을 하고 싶습니다. 가능한 시간을 알려 주세요."
+        ),
+        (
+            ["늦", "지각"],
+            "예정된 시간보다 조금 늦을 것 같습니다. 양해 부탁드립니다."
+        ),
+        (
+            ["아파", "통증", "아픈"],
+            "현재 몸이 아프고 불편한 증상이 있습니다. 진료 상담을 받고 싶습니다."
+        ),
+        (
+            ["약", "처방"],
+            "처방받은 약에 대해 문의하고 싶습니다. 확인 부탁드립니다."
+        ),
+        (
+            ["검사", "결과"],
+            "검사 결과를 확인하고 싶습니다. 확인 방법을 안내해 주세요."
+        ),
+        (
+            ["취소", "변경"],
+            "예정된 진료 일정을 변경하거나 취소하고 싶습니다."
+        ),
+        (
+            ["도착", "왔어요"],
+            "병원에 도착했습니다. 어디로 가면 되는지 안내 부탁드립니다."
+        ),
+        (
+            ["문의", "질문"],
+            "진료와 관련하여 문의할 내용이 있습니다. 연락 부탁드립니다."
+        )
+    ],
+
+    "일상적인 연락": [
+        (
+            ["고마워", "감사"],
+            "도와주셔서 정말 감사합니다. 덕분에 잘 해결했어요."
+        ),
+        (
+            ["미안", "죄송"],
+            "미리 말씀드리지 못해 죄송합니다. 양해 부탁드립니다."
+        ),
+        (
+            ["약속", "만나"],
+            "약속 시간과 장소를 다시 한번 확인하고 싶습니다."
+        ),
+        (
+            ["늦", "지각"],
+            "예정보다 조금 늦을 것 같습니다. 도착하면 연락드리겠습니다."
+        ),
+        (
+            ["전화", "통화"],
+            "지금은 통화하기 어렵습니다. 나중에 다시 연락드리겠습니다."
+        ),
+        (
+            ["부탁", "도와"],
+            "부탁드릴 일이 있습니다. 시간 괜찮으실 때 연락 부탁드립니다."
+        ),
+        (
+            ["안부", "잘 지내"],
+            "잘 지내고 계신가요? 안부가 궁금해서 연락드렸습니다."
+        ),
+        (
+            ["확인", "알려"],
+            "내용을 확인하고 싶습니다. 확인 후 답변 부탁드립니다."
+        )
+    ],
+
+    "긴급한 연락": [
+        (
+            ["도움", "도와줘", "도와주세요"],
+            "지금 도움이 필요합니다. 가능한 한 빨리 연락해 주세요."
+        ),
+        (
+            ["길", "길을 잃", "위치"],
+            "현재 위치를 찾기 어렵습니다. 연락해 주시고 도움을 부탁드립니다."
+        ),
+        (
+            ["아파", "다쳤", "몸이 안"],
+            "몸이 좋지 않아 도움이 필요합니다. 가능한 한 빨리 연락해 주세요."
+        ),
+        (
+            ["위험", "무서"],
+            "현재 안전에 대한 걱정이 있습니다. 연락하여 도움을 부탁드립니다."
+        ),
+        (
+            ["연락", "전화"],
+            "급하게 전할 말이 있습니다. 확인하는 대로 연락 부탁드립니다."
+        ),
+        (
+            ["병원", "응급"],
+            "병원에 도움이 필요한 상황입니다. 가능한 한 빨리 연락해 주세요."
+        )
+    ]
+}
+
+
+# 상황별 기본 문장
+default_sentences = {
+    "가족에게 연락하기":
+        "안녕하세요. 잘 지내고 있어요. 시간 될 때 다시 연락할게요.",
+
+    "병원 관련 연락":
+        "안녕하세요. 병원 진료와 관련하여 문의드리고 싶습니다.",
+
+    "일상적인 연락":
+        "안녕하세요. 전할 말이 있어 연락드렸습니다.",
+
+    "긴급한 연락":
+        "지금 도움이 필요한 상황입니다. 확인하시면 연락 부탁드립니다."
+}
+
+
+# -------------------------
+# 문장 생성 함수
+# -------------------------
+def make_sentence(situation, keyword, extra):
+    keyword = keyword.strip()
+    extra = extra.strip()
+
+    # 입력한 단어와 상황에 맞는 문장 찾기
+    if keyword:
+        for words, sentence in sentence_rules[situation]:
+            if any(word in keyword for word in words):
+                result = sentence
+
+                if extra:
+                    result += " " + extra
+
+                return result
+
+    # 맞는 표현을 찾지 못했을 때 기본 문장 생성
+    if keyword:
+        if situation == "가족에게 연락하기":
+            result = f"안녕하세요. {keyword}."
+
+        elif situation == "병원 관련 연락":
+            result = f"안녕하세요. {keyword}에 대해 문의드리고 싶습니다."
+
+        elif situation == "일상적인 연락":
+            result = f"안녕하세요. {keyword}."
+
+        else:
+            result = f"현재 {keyword}. 도움이 필요합니다."
+
+    else:
+        result = default_sentences[situation]
+
+    if extra:
+        result += " " + extra
+
+    if not result.endswith((".", "!", "?")):
+        result += "."
+
+    return result
 
 
 # -------------------------
@@ -283,9 +434,10 @@ with st.expander("📌 사용 방법"):
     st.write("""
     1. 연락처를 등록합니다.
     2. 문자를 보낼 사람을 선택합니다.
-    3. 전달하고 싶은 상황을 선택합니다.
-    4. 필요한 내용을 입력하고 문장을 만듭니다.
-    5. 완성된 문장을 확인하고 문자 앱으로 연결합니다.
+    3. 상황을 선택합니다.
+    4. 전달하고 싶은 단어나 내용을 입력합니다.
+    5. 자동으로 만들어진 문장을 확인하고 수정합니다.
+    6. 문자 앱을 열어 직접 전송합니다.
     """)
 
 st.divider()
@@ -360,7 +512,6 @@ selected_name = None
 selected_phone = None
 
 if st.session_state["contact_book"]:
-
     selected_name = st.selectbox(
         "누구에게 문자를 보낼까요?",
         options=list(st.session_state["contact_book"].keys()),
@@ -391,38 +542,38 @@ situation = st.selectbox(
     key="situation_select"
 )
 
-templates = {
-    "가족에게 연락하기": "안녕하세요. 지금 ",
-    "병원 관련 연락": "안녕하세요. 병원 관련해서 ",
-    "일상적인 연락": "안녕하세요. ",
-    "긴급한 연락": "도움이 필요합니다. 지금 "
-}
+st.caption("상황에 맞는 단어나 짧은 문장을 입력해 주세요.")
 
 keyword = st.text_input(
     "전달하고 싶은 내용",
-    placeholder="예: 집에 도착했어요",
+    placeholder="예: 병원 예약을 하고 싶어요",
     key="keyword_input"
 )
 
 extra = st.text_input(
     "추가로 덧붙일 말 (선택)",
-    placeholder="예: 걱정하지 마세요",
+    placeholder="예: 오후 시간으로 부탁드려요",
     key="extra_input"
 )
 
+# 입력 예시
+with st.expander("💡 입력할 수 있는 단어 예시"):
+    st.write("""
+    **가족:** 늦어요, 도착했어요, 병원, 식사, 전화, 고마워요
+
+    **병원:** 예약, 진료, 아파요, 약, 검사 결과, 일정 변경
+
+    **일상:** 감사, 죄송, 약속, 늦어요, 부탁, 안부
+
+    **긴급:** 도움이 필요해요, 길을 잃었어요, 아파요, 위험해요
+    """)
+
 if st.button("✨ 문장 만들기", use_container_width=True):
-    sentence = templates[situation]
-
-    if keyword.strip():
-        sentence += keyword.strip()
-    else:
-        sentence += "연락드립니다."
-
-    if extra.strip():
-        sentence += " " + extra.strip()
-
-    if not sentence.endswith((".", "!", "?")):
-        sentence += "."
+    sentence = make_sentence(
+        situation,
+        keyword,
+        extra
+    )
 
     st.session_state["generated_sentence"] = sentence
     st.session_state["edited_sentence"] = sentence
@@ -447,7 +598,6 @@ if st.session_state["generated_sentence"]:
 
     # 문자 앱 연결
     if selected_phone:
-
         message = urllib.parse.quote(
             st.session_state["edited_sentence"]
         )
@@ -524,7 +674,6 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file is not None:
-
     try:
         restored = json.load(uploaded_file)
 
@@ -535,7 +684,6 @@ if uploaded_file is not None:
             valid_contacts = {}
 
             for name, phone in restored.items():
-
                 if (
                     isinstance(name, str)
                     and isinstance(phone, str)

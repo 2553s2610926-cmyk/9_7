@@ -1,515 +1,286 @@
 
 import streamlit as st
-import re
+import urllib.parse
 import json
-from urllib.parse import quote
+import re
 
-# ==================================
-# 1. 기본 설정
-# ==================================
 st.set_page_config(
     page_title="한마디 도우미",
-    page_icon="💙",
+    page_icon="💬",
     layout="centered"
 )
 
-# ==================================
-# 2. 하늘색 디자인 + 검정색 글씨
-# ==================================
+# -------------------------
+# 화면 디자인
+# -------------------------
 st.markdown("""
 <style>
 .stApp {
     background: linear-gradient(
-        180deg, #D8F0FF, #F3FAFF, #FFFFFF
+        135deg,
+        #e8f7ff,
+        #d4efff,
+        #f3fbff
     );
-}
-
-.block-container {
-    max-width: 650px;
-    padding-top: 2rem;
-}
-
-/* 모든 기본 글씨 검정색 */
-html, body, p, span, label, li,
-h1, h2, h3, h4, h5, h6,
-div, small {
     color: #000000;
 }
 
-/* 제목 */
-h1, h2, h3, h4 {
-    color: #000000 !important;
-    font-weight: bold !important;
+header[data-testid="stHeader"] {
+    background: transparent;
 }
 
-/* 상단 소개 카드 */
-.hero {
-    background: #D5EDFF;
-    padding: 25px 15px;
-    border-radius: 25px;
-    text-align: center;
+h1, h2, h3, p, label, span, div {
+    color: #000000;
 }
 
-.hero * {
-    color: #000000 !important;
-}
-
-/* 버튼 */
-div.stButton > button,
-div.stDownloadButton > button {
-    width: 100%;
-    min-height: 50px;
-    border-radius: 14px;
-    background: #DDF1FF;
-    color: #000000 !important;
-    border: 1px solid #8ABFE0;
-    font-size: 16px;
-    font-weight: bold;
-}
-
-div.stButton > button:hover,
-div.stDownloadButton > button:hover {
-    background: #BFE4FC;
-    color: #000000 !important;
-    border: 1px solid #589BC8;
+.main .block-container {
+    padding-top: 2rem;
+    padding-bottom: 3rem;
+    max-width: 750px;
 }
 
 /* 입력창 */
-div[data-testid="stTextInput"] input,
-div[data-testid="stTextArea"] textarea {
+.stTextInput input,
+.stTextArea textarea,
+.stSelectbox div[data-baseweb="select"] {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #a9ddf5 !important;
+    border-radius: 12px !important;
+}
+
+/* 버튼 */
+.stButton button,
+.stDownloadButton button {
+    background-color: #b9e7ff !important;
+    color: #000000 !important;
+    border: 1px solid #a1d9f5 !important;
+    border-radius: 12px !important;
+    font-weight: 600;
+}
+
+.stButton button:hover,
+.stDownloadButton button:hover {
+    background-color: #9edcff !important;
+    border-color: #83ccef !important;
+}
+
+/* 안내 상자 */
+div[data-testid="stAlert"] {
+    background-color: #ffffff !important;
+    border: 1px solid #b9e7ff !important;
     border-radius: 12px;
-    font-size: 16px;
-    color: #000000 !important;
-    background: #FFFFFF !important;
-}
-
-input::placeholder,
-textarea::placeholder {
-    color: #666666 !important;
-    opacity: 1;
-}
-
-/* 선택 메뉴 */
-div[data-baseweb="select"] *,
-div[data-baseweb="popover"] * {
-    color: #000000 !important;
-}
-
-/* 안내 박스 */
-div[data-testid="stAlert"] * {
-    color: #000000 !important;
-}
-
-/* 펼치기 메뉴 */
-details summary,
-details summary p {
-    color: #000000 !important;
-}
-
-/* 체크박스 및 라디오 */
-div[data-testid="stCheckbox"] *,
-div[data-testid="stRadio"] * {
-    color: #000000 !important;
-}
-
-/* 코드 영역 */
-div[data-testid="stCode"] * {
-    color: #000000 !important;
 }
 
 /* 구분선 */
 hr {
-    border-color: #B7D9EE;
+    border-color: #b9e7ff !important;
+}
+
+/* 펼치기 메뉴 */
+details {
+    background-color: #ffffff;
+    border: 1px solid #b9e7ff;
+    border-radius: 12px;
+    padding: 10px;
+}
+
+/* 파일 업로드 영역 */
+div[data-testid="stFileUploader"] {
+    background-color: #ffffff;
+    border: 1px solid #b9e7ff;
+    border-radius: 12px;
+    padding: 12px;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ==================================
-# 3. 데이터 초기화
-# ==================================
+
+# -------------------------
+# 연락처 초기화
+# -------------------------
 if "contact_book" not in st.session_state:
     st.session_state["contact_book"] = {}
 
 if not isinstance(st.session_state["contact_book"], dict):
     st.session_state["contact_book"] = {}
 
-if "generated_sentence" not in st.session_state:
-    st.session_state["generated_sentence"] = ""
-
 if "edited_sentence" not in st.session_state:
     st.session_state["edited_sentence"] = ""
 
-# ==================================
-# 4. 문장 자료
-# ==================================
-SITUATIONS = {
-    "👨‍👩‍👧 가족": {
-        "안부": "{recipient}아, 잘 지내고 있니? 나는 잘 지내고 있어.",
-        "전화 부탁": "{recipient}아, 시간이 될 때 나에게 전화해 줘.",
-        "방문 부탁": "{recipient}아, 시간이 되면 우리 집에 한번 와 줘.",
-        "감사": "{recipient}아, 항상 챙겨 줘서 고맙다.",
-        "식사": "{recipient}아, 밥은 잘 먹고 다니니? 건강 잘 챙기렴.",
-        "직접 작성": "{recipient}에게 연락하고 싶어."
-    },
-    "🏥 병원": {
-        "진료 예약": "{recipient}, 진료 예약을 하고 싶습니다.",
-        "예약 변경": "{recipient}, 진료 예약 날짜를 변경하고 싶습니다.",
-        "약 문의": "{recipient}, 약을 어떻게 먹어야 하는지 알려 주세요.",
-        "도움 요청": "{recipient}, 도움이 필요합니다. 도와주세요.",
-        "직접 작성": "{recipient}에게 문의하고 싶습니다."
-    },
-    "🛒 일상": {
-        "가격 문의": "{recipient}, 이 물건은 얼마인가요?",
-        "길 묻기": "{recipient}, {keyword}에 어떻게 가나요?",
-        "물건 찾기": "{recipient}, {keyword}를 찾고 있는데 도와주세요.",
-        "약속": "{recipient}, {keyword}에서 만나요.",
-        "감사": "{recipient}, 도와주셔서 감사합니다.",
-        "부탁": "{recipient}, 잠시 도와주실 수 있나요?",
-        "직접 작성": "{recipient}에게 {keyword}에 대해 이야기하고 싶습니다."
-    },
-    "🚨 긴급 연락": {
-        "도움 요청": "{recipient}, 지금 도움이 필요해요. 연락해 주세요.",
-        "몸이 아픔": "{recipient}, 몸이 많이 아파요. 도와주세요.",
-        "길을 잃음": "{recipient}, 길을 잃었어요. 연락해 주세요.",
-        "위험한 상황": "{recipient}, 지금 위험한 상황이에요. 도움을 요청해 주세요.",
-        "직접 작성": "{recipient}, 지금 도움이 필요합니다."
-    }
-}
+if "generated_sentence" not in st.session_state:
+    st.session_state["generated_sentence"] = ""
 
-# ==================================
-# 5. 첫 화면
-# ==================================
-st.markdown("""
-<div class="hero">
-    <div style="font-size:40px;">💙</div>
-    <div style="font-size:32px;font-weight:bold;">
-        한마디 도우미
-    </div>
-    <p>
-        소중한 사람에게 마음을 쉽게 전해 보세요.
-    </p>
-</div>
-""", unsafe_allow_html=True)
 
-with st.expander("📖 간단한 사용 방법"):
+# -------------------------
+# 제목
+# -------------------------
+st.title("💬 한마디 도우미")
+st.write("필요한 말을 쉽고 간편하게 만들어 보세요!")
+
+with st.expander("📌 사용 방법"):
     st.write("""
-    1. 이름과 전화번호를 저장해요.
-    2. 문자 받을 사람을 선택해요.
-    3. 상황과 전달할 내용을 선택해요.
-    4. 완성된 문장을 원하는 대로 수정해요.
-    5. 문자 앱을 열어 직접 보내요.
+    1. 연락처를 등록합니다.
+    2. 전달하고 싶은 상황을 선택합니다.
+    3. 필요한 단어나 추가 내용을 입력합니다.
+    4. 자동으로 만들어진 문장을 확인하고 수정합니다.
+    5. 문자 앱을 열어 내용을 전송합니다.
     """)
 
 st.divider()
 
-# ==================================
-# 6. 연락처 저장
-# ==================================
-st.header("👤 나의 연락처")
-st.write("자주 연락하는 사람을 등록해 보세요.")
+
+# -------------------------
+# 연락처 등록
+# -------------------------
+st.subheader("📱 연락처 관리")
 
 with st.form("contact_form", clear_on_submit=True):
-
-    name_input = st.text_input(
-        "이름",
-        placeholder="예: 우리 아들",
-        max_chars=40
-    )
-
-    phone_input = st.text_input(
+    contact_name = st.text_input("이름", placeholder="예: 딸")
+    contact_phone = st.text_input(
         "전화번호",
-        placeholder="예: 010-1234-5678",
-        max_chars=20
+        placeholder="예: 01012345678"
     )
 
-    save_button = st.form_submit_button(
-        "＋ 연락처 저장",
+    save_contact = st.form_submit_button(
+        "연락처 저장",
         use_container_width=True
     )
 
-if save_button:
+    if save_contact:
+        name = contact_name.strip()
+        phone = re.sub(r"[\s()-]", "", contact_phone.strip())
 
-    name = name_input.strip()
-    phone = re.sub(r"[\s()-]", "", phone_input.strip())
+        if not name or not phone:
+            st.warning("이름과 전화번호를 모두 입력해 주세요.")
+        elif not re.fullmatch(r"\+?\d{8,15}", phone):
+            st.warning("전화번호를 올바르게 입력해 주세요.")
+        elif name in st.session_state["contact_book"]:
+            st.warning("이미 등록된 이름입니다.")
+        else:
+            st.session_state["contact_book"][name] = phone
+            st.success(f"{name} 연락처가 저장되었습니다!")
 
-    if not name:
-        st.error("이름을 입력해 주세요.")
+# 연락처 목록
+if st.session_state["contact_book"]:
+    st.write("**저장된 연락처**")
 
-    elif not re.fullmatch(r"\+?\d{8,15}", phone):
-        st.error("전화번호를 확인해 주세요. 예: 010-1234-5678")
-
-    elif name in st.session_state["contact_book"]:
-        st.warning("이미 저장된 이름이에요.")
-
-    else:
-        st.session_state["contact_book"][name] = phone
-        st.success(f"{name} 연락처가 저장되었어요!")
-        st.rerun()
-
-# ==================================
-# 7. 연락처 목록 및 삭제
-# ==================================
-st.subheader("📋 저장된 연락처")
-
-contacts = st.session_state["contact_book"]
-
-if contacts:
-
-    for person, number in list(contacts.items()):
-
-        col1, col2 = st.columns([3, 1])
+    for name, phone in list(st.session_state["contact_book"].items()):
+        col1, col2 = st.columns([4, 1])
 
         with col1:
-            st.write("💙 " + person)
-            st.caption(number)
+            st.write(f"👤 {name} : {phone}")
 
         with col2:
-            if st.button("삭제", key="delete_" + person):
-                del st.session_state["contact_book"][person]
+            if st.button("삭제", key=f"delete_{name}"):
+                del st.session_state["contact_book"][name]
                 st.rerun()
-
 else:
-    st.info("아직 저장된 연락처가 없어요.")
-
-# ==================================
-# 8. 연락처 백업 및 복원
-# ==================================
-with st.expander("📁 연락처 백업 및 복원"):
-
-    if contacts:
-
-        backup = json.dumps(
-            contacts,
-            ensure_ascii=False,
-            indent=2
-        )
-
-        st.download_button(
-            "📥 연락처 백업하기",
-            data=backup,
-            file_name="연락처_백업.json",
-            mime="application/json",
-            use_container_width=True
-        )
-
-    uploaded = st.file_uploader(
-        "백업 파일 불러오기",
-        type=["json"]
-    )
-
-    if uploaded is not None:
-
-        if st.button("연락처 복원하기"):
-
-            try:
-                data = json.load(uploaded)
-
-                if not isinstance(data, dict) or len(data) > 200:
-                    raise ValueError()
-
-                valid = {}
-
-                for person, number in data.items():
-
-                    cleaned = re.sub(
-                        r"[\s()-]",
-                        "",
-                        str(number)
-                    )
-
-                    if (
-                        isinstance(person, str)
-                        and person.strip()
-                        and len(person) <= 40
-                        and re.fullmatch(r"\+?\d{8,15}", cleaned)
-                    ):
-                        valid[person.strip()] = cleaned
-
-                if not valid:
-                    raise ValueError()
-
-                st.session_state["contact_book"].update(valid)
-
-                st.success("연락처를 불러왔어요!")
-                st.rerun()
-
-            except Exception:
-                st.error("백업 파일을 확인해 주세요.")
+    st.info("아직 저장된 연락처가 없습니다.")
 
 st.divider()
 
-# ==================================
-# 9. 연락처 선택
-# ==================================
-if not st.session_state["contact_book"]:
 
-    st.info("먼저 연락처를 저장해 주세요.")
-    st.stop()
-
-st.header("💌 문자 받을 사람")
-
-selected_name = st.selectbox(
-    "누구에게 보낼까요?",
-    list(st.session_state["contact_book"].keys())
-)
-
-selected_phone = st.session_state["contact_book"][selected_name]
-
-st.success("선택한 사람: " + selected_name)
-st.caption("전화번호: " + selected_phone)
-
-st.divider()
-
-# ==================================
-# 10. 문장 만들기
-# ==================================
-st.header("✏️ 전하고 싶은 말")
+# -------------------------
+# 상황 선택
+# -------------------------
+st.subheader("✏️ 문장 만들기")
 
 situation = st.selectbox(
-    "상황 선택",
-    list(SITUATIONS.keys())
+    "어떤 상황인가요?",
+    [
+        "가족에게 연락하기",
+        "병원 관련 연락",
+        "일상적인 연락",
+        "긴급한 연락"
+    ]
 )
 
-message_type = st.selectbox(
-    "전달할 내용",
-    list(SITUATIONS[situation].keys())
-)
+templates = {
+    "가족에게 연락하기": "안녕하세요. 지금 ",
+    "병원 관련 연락": "안녕하세요. 병원 관련해서 ",
+    "일상적인 연락": "안녕하세요. ",
+    "긴급한 연락": "도움이 필요합니다. 지금 "
+}
 
 keyword = st.text_input(
-    "추가할 단어 (선택)",
-    placeholder="예: 시장, 내일, 오후 3시",
-    max_chars=100
+    "전달하고 싶은 내용",
+    placeholder="예: 집에 도착했어요"
 )
 
 extra = st.text_input(
-    "더 넣고 싶은 말 (선택)",
-    placeholder="예: 조금 늦을 것 같아요",
-    max_chars=100
+    "추가로 덧붙일 말 (선택)",
+    placeholder="예: 걱정하지 마세요"
 )
 
-if st.button(
-    "✨ 문장 만들기",
-    type="primary",
-    use_container_width=True
-):
+if st.button("✨ 문장 만들기", use_container_width=True):
+    sentence = templates[situation]
 
-    try:
+    if keyword.strip():
+        sentence += keyword.strip()
+    else:
+        sentence += "연락드립니다."
 
-        template = SITUATIONS[situation][message_type]
+    if extra.strip():
+        sentence += " " + extra.strip()
 
-        sentence = template.format(
-            recipient=selected_name,
-            keyword=keyword.strip() or "그곳"
-        )
+    if not sentence.endswith((".", "!", "?")):
+        sentence += "."
 
-        if extra.strip():
-
-            sentence = sentence.rstrip(" .!?") + ". " + extra.strip()
-
-            if sentence[-1] not in ".!?":
-                sentence += "."
-
-        st.session_state["generated_sentence"] = sentence
-        st.session_state["edited_sentence"] = sentence
-
-        st.rerun()
-
-    except Exception:
-        st.error("문장을 만드는 중 오류가 발생했어요.")
+    st.session_state["generated_sentence"] = sentence
+    st.session_state["edited_sentence"] = sentence
 
 st.divider()
 
-# ==================================
-# 11. 문장 수정 및 문자 보내기
-# ==================================
-st.header("📝 완성된 문장")
+
+# -------------------------
+# 문장 수정
+# -------------------------
+st.subheader("📝 완성된 문장")
 
 if st.session_state["generated_sentence"]:
-
-    st.success("문장이 완성되었어요!")
-
     st.text_area(
-        "문장을 자유롭게 수정해 보세요.",
+        "필요하다면 문장을 직접 수정할 수 있어요.",
         key="edited_sentence",
-        height=150,
-        max_chars=2000
+        height=150
     )
 
-    final_message = st.session_state["edited_sentence"].strip()
+    st.caption("아래 버튼을 누르면 문자 앱으로 연결됩니다.")
 
-    if final_message:
-
-        st.subheader("📩 문자 보내기")
-
-        st.write("최종 전송 내용")
-        st.code(final_message, language=None)
-
-        encoded_message = quote(final_message, safe="")
-        encoded_phone = quote(selected_phone, safe="")
-
-        android_link = (
-            f"sms:{encoded_phone}?body={encoded_message}"
+    # 연락처 선택
+    if st.session_state["contact_book"]:
+        selected_name = st.selectbox(
+            "문자를 보낼 사람",
+            list(st.session_state["contact_book"].keys())
         )
 
-        iphone_link = (
-            f"sms:{encoded_phone}&body={encoded_message}"
+        phone = st.session_state["contact_book"][selected_name]
+
+        message = urllib.parse.quote(
+            st.session_state["edited_sentence"]
         )
+
+        sms_link = f"sms:{phone}?body={message}"
 
         st.markdown(
-            f"""
-            <a href="{android_link}" target="_self"
-            style="
-            display:block;
-            text-align:center;
-            background:#79C7F2;
-            color:#000000;
-            padding:16px;
-            border-radius:15px;
-            font-size:18px;
-            font-weight:bold;
-            text-decoration:none;
-            margin:10px 0;">
-            📩 문자 앱 열기
-            </a>
-            """,
+            f'<a href="{sms_link}" target="_blank" '
+            f'style="display:block; text-align:center; '
+            f'background-color:#b9e7ff; color:#000000; '
+            f'padding:12px; border-radius:12px; '
+            f'text-decoration:none; font-weight:bold;">'
+            f'📨 문자 앱 열기</a>',
             unsafe_allow_html=True
         )
-
-        st.markdown(
-            f"""
-            <a href="{iphone_link}" target="_self"
-            style="
-            display:block;
-            text-align:center;
-            background:#D8F0FF;
-            color:#000000;
-            padding:16px;
-            border-radius:15px;
-            font-size:18px;
-            font-weight:bold;
-            text-decoration:none;
-            margin:10px 0;">
-            📱 아이폰 문자 앱 열기
-            </a>
-            """,
-            unsafe_allow_html=True
-        )
-
-        st.caption(
-            "문자 앱에서 받는 사람과 내용을 확인한 뒤 직접 보내세요. "
-            "기기와 브라우저에 따라 자동 입력이 지원되지 않을 수 있어요."
-        )
-
-        st.download_button(
-            "📄 문장 파일 저장",
-            data=final_message,
-            file_name="완성된_문장.txt",
-            mime="text/plain",
-            use_container_width=True
-        )
-
     else:
-        st.warning("문장을 입력해 주세요.")
+        st.info("문자를 보내려면 먼저 연락처를 등록해 주세요.")
+
+    st.download_button(
+        "📥 문장 파일로 저장하기",
+        data=st.session_state["edited_sentence"],
+        file_name="완성된_문장.txt",
+        mime="text/plain",
+        use_container_width=True
+    )
 
     if st.button("🔄 새 문장 만들기", use_container_width=True):
         st.session_state["generated_sentence"] = ""
@@ -517,24 +288,62 @@ if st.session_state["generated_sentence"]:
         st.rerun()
 
 else:
-    st.info("위에서 문장 만들기를 눌러 주세요.")
+    st.info("위에서 내용을 입력하고 '문장 만들기'를 눌러 주세요.")
 
-# ==================================
-# 12. 마지막 안내
-# ==================================
+
+# -------------------------
+# 연락처 백업 및 복원
+# -------------------------
 st.divider()
+st.subheader("💾 연락처 백업 및 복원")
 
-st.markdown("""
-<div class="hero">
-    <div style="font-size:30px;">☁️ 💙 ☁️</div>
-    <b style="font-size:18px;">
-        누구나 쉽게 소통할 수 있도록
-    </b>
-    <p>한마디 도우미</p>
-</div>
-""", unsafe_allow_html=True)
+st.caption("저장한 연락처를 파일로 백업하거나 다시 불러올 수 있습니다.")
 
-st.caption(
-    "연락처는 현재 세션 동안만 저장됩니다. "
-    "긴급 상황에서는 119 등 적절한 도움을 요청하세요."
+backup_data = json.dumps(
+    st.session_state["contact_book"],
+    ensure_ascii=False,
+    indent=4
 )
+
+st.download_button(
+    "📥 연락처 백업하기",
+    data=backup_data,
+    file_name="연락처_백업.json",
+    mime="application/json",
+    use_container_width=True
+)
+
+uploaded_file = st.file_uploader(
+    "백업한 연락처 파일 불러오기",
+    type=["json"]
+)
+
+if uploaded_file is not None:
+    try:
+        restored = json.load(uploaded_file)
+
+        if not isinstance(restored, dict):
+            st.error("올바른 연락처 백업 파일이 아닙니다.")
+        else:
+            valid_contacts = {}
+
+            for name, phone in restored.items():
+                if (
+                    isinstance(name, str)
+                    and isinstance(phone, str)
+                    and name.strip()
+                    and re.fullmatch(r"\+?\d{8,15}", phone)
+                ):
+                    valid_contacts[name.strip()] = phone
+
+            if st.button("연락처 복원하기"):
+                st.session_state["contact_book"].update(valid_contacts)
+                st.success("연락처를 복원했습니다!")
+                st.rerun()
+
+    except Exception:
+        st.error("파일을 읽을 수 없습니다. 백업 파일을 확인해 주세요.")
+
+
+st.divider()
+st.caption("한마디 도우미 | 쉽고 편리한 소통을 위한 앱")

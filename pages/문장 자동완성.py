@@ -11,93 +11,184 @@ st.set_page_config(
 )
 
 # -------------------------
-# 화면 디자인
+# 색상 및 디자인 설정
 # -------------------------
 st.markdown("""
 <style>
+
+/* 전체 배경 */
 .stApp {
-    background: linear-gradient(
-        135deg,
-        #e8f7ff,
-        #d4efff,
-        #f3fbff
-    );
-    color: #000000;
+    background: linear-gradient(135deg, #eaf8ff, #d7f0ff, #f5fcff);
+    color: #000000 !important;
 }
 
+/* 기본 글자색 */
+html, body, [data-testid="stAppViewContainer"],
+[data-testid="stMain"], .main, p, label, h1, h2, h3,
+span, li, small, strong {
+    color: #000000 !important;
+}
+
+/* 상단 영역 */
 header[data-testid="stHeader"] {
-    background: transparent;
+    background-color: transparent !important;
 }
 
-h1, h2, h3, p, label, span, div {
-    color: #000000;
+/* 입력창 */
+.stTextInput input,
+.stTextArea textarea,
+[data-baseweb="input"] input,
+[data-baseweb="textarea"] textarea {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 2px solid #b5e3f8 !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
 }
 
+/* 선택창 바깥 부분 */
+[data-baseweb="select"] > div {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 2px solid #b5e3f8 !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+}
+
+/* 선택창 안의 글자와 아이콘 */
+[data-baseweb="select"] *,
+[data-baseweb="select"] svg {
+    color: #000000 !important;
+    fill: #000000 !important;
+}
+
+/* 드롭다운 목록 */
+[data-baseweb="popover"],
+[data-baseweb="menu"],
+[data-baseweb="popover"] ul,
+[data-baseweb="menu"] ul,
+[data-baseweb="popover"] li,
+[data-baseweb="menu"] li {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border-color: #b5e3f8 !important;
+    box-shadow: none !important;
+}
+
+/* 드롭다운 선택 항목 */
+[role="option"] {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+}
+
+[role="option"]:hover,
+[role="option"][aria-selected="true"] {
+    background-color: #dff3ff !important;
+    color: #000000 !important;
+}
+
+/* 모든 기본 버튼 */
+.stButton button,
+.stDownloadButton button,
+button[kind],
+button[data-testid] {
+    background-color: #bde8ff !important;
+    background-image: none !important;
+    color: #000000 !important;
+    border: 2px solid #a5dcf7 !important;
+    border-radius: 12px !important;
+    box-shadow: none !important;
+}
+
+/* 버튼 내부 글자 */
+.stButton button *,
+.stDownloadButton button *,
+button[kind] * {
+    color: #000000 !important;
+    fill: #000000 !important;
+}
+
+/* 버튼에 마우스를 올렸을 때 */
+.stButton button:hover,
+.stDownloadButton button:hover,
+button[kind]:hover {
+    background-color: #a9dfff !important;
+    color: #000000 !important;
+    border-color: #8ed0f2 !important;
+    box-shadow: none !important;
+}
+
+/* 버튼을 누르거나 선택했을 때 */
+.stButton button:focus,
+.stButton button:active,
+.stDownloadButton button:focus,
+.stDownloadButton button:active {
+    background-color: #a9dfff !important;
+    color: #000000 !important;
+    outline: 2px solid #b5e3f8 !important;
+    box-shadow: none !important;
+}
+
+/* 라디오 버튼과 체크박스 */
+[data-testid="stRadio"],
+[data-testid="stCheckbox"] {
+    color: #000000 !important;
+}
+
+/* 알림창 */
+[data-testid="stAlert"] {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #b5e3f8 !important;
+    border-radius: 12px !important;
+}
+
+/* 펼치기 영역 */
+details,
+[data-testid="stExpander"] {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #b5e3f8 !important;
+    border-radius: 12px !important;
+}
+
+/* 파일 업로드 */
+[data-testid="stFileUploader"],
+[data-testid="stFileUploader"] section {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #b5e3f8 !important;
+    border-radius: 12px !important;
+}
+
+/* 구분선 */
+hr {
+    border-color: #b5e3f8 !important;
+}
+
+/* 포커스 테두리 */
+*:focus-visible {
+    outline-color: #8ed0f2 !important;
+}
+
+/* 링크 */
+a {
+    color: #000000 !important;
+}
+
+/* 화면 아래쪽 여백 */
 .main .block-container {
     padding-top: 2rem;
     padding-bottom: 3rem;
     max-width: 750px;
 }
 
-/* 입력창 */
-.stTextInput input,
-.stTextArea textarea,
-.stSelectbox div[data-baseweb="select"] {
-    background-color: #ffffff !important;
-    color: #000000 !important;
-    border: 1px solid #a9ddf5 !important;
-    border-radius: 12px !important;
-}
-
-/* 버튼 */
-.stButton button,
-.stDownloadButton button {
-    background-color: #b9e7ff !important;
-    color: #000000 !important;
-    border: 1px solid #a1d9f5 !important;
-    border-radius: 12px !important;
-    font-weight: 600;
-}
-
-.stButton button:hover,
-.stDownloadButton button:hover {
-    background-color: #9edcff !important;
-    border-color: #83ccef !important;
-}
-
-/* 안내 상자 */
-div[data-testid="stAlert"] {
-    background-color: #ffffff !important;
-    border: 1px solid #b9e7ff !important;
-    border-radius: 12px;
-}
-
-/* 구분선 */
-hr {
-    border-color: #b9e7ff !important;
-}
-
-/* 펼치기 메뉴 */
-details {
-    background-color: #ffffff;
-    border: 1px solid #b9e7ff;
-    border-radius: 12px;
-    padding: 10px;
-}
-
-/* 파일 업로드 영역 */
-div[data-testid="stFileUploader"] {
-    background-color: #ffffff;
-    border: 1px solid #b9e7ff;
-    border-radius: 12px;
-    padding: 12px;
-}
 </style>
 """, unsafe_allow_html=True)
 
 
 # -------------------------
-# 연락처 초기화
+# 세션 데이터 초기화
 # -------------------------
 if "contact_book" not in st.session_state:
     st.session_state["contact_book"] = {}
@@ -105,11 +196,11 @@ if "contact_book" not in st.session_state:
 if not isinstance(st.session_state["contact_book"], dict):
     st.session_state["contact_book"] = {}
 
-if "edited_sentence" not in st.session_state:
-    st.session_state["edited_sentence"] = ""
-
 if "generated_sentence" not in st.session_state:
     st.session_state["generated_sentence"] = ""
+
+if "edited_sentence" not in st.session_state:
+    st.session_state["edited_sentence"] = ""
 
 
 # -------------------------
@@ -131,12 +222,16 @@ st.divider()
 
 
 # -------------------------
-# 연락처 등록
+# 연락처 관리
 # -------------------------
 st.subheader("📱 연락처 관리")
 
 with st.form("contact_form", clear_on_submit=True):
-    contact_name = st.text_input("이름", placeholder="예: 딸")
+    contact_name = st.text_input(
+        "이름",
+        placeholder="예: 딸"
+    )
+
     contact_phone = st.text_input(
         "전화번호",
         placeholder="예: 01012345678"
@@ -153,13 +248,17 @@ with st.form("contact_form", clear_on_submit=True):
 
         if not name or not phone:
             st.warning("이름과 전화번호를 모두 입력해 주세요.")
+
         elif not re.fullmatch(r"\+?\d{8,15}", phone):
             st.warning("전화번호를 올바르게 입력해 주세요.")
+
         elif name in st.session_state["contact_book"]:
             st.warning("이미 등록된 이름입니다.")
+
         else:
             st.session_state["contact_book"][name] = phone
             st.success(f"{name} 연락처가 저장되었습니다!")
+
 
 # 연락처 목록
 if st.session_state["contact_book"]:
@@ -182,7 +281,7 @@ st.divider()
 
 
 # -------------------------
-# 상황 선택
+# 문장 만들기
 # -------------------------
 st.subheader("✏️ 문장 만들기")
 
@@ -234,11 +333,12 @@ st.divider()
 
 
 # -------------------------
-# 문장 수정
+# 완성된 문장
 # -------------------------
 st.subheader("📝 완성된 문장")
 
 if st.session_state["generated_sentence"]:
+
     st.text_area(
         "필요하다면 문장을 직접 수정할 수 있어요.",
         key="edited_sentence",
@@ -247,8 +347,8 @@ if st.session_state["generated_sentence"]:
 
     st.caption("아래 버튼을 누르면 문자 앱으로 연결됩니다.")
 
-    # 연락처 선택
     if st.session_state["contact_book"]:
+
         selected_name = st.selectbox(
             "문자를 보낼 사람",
             list(st.session_state["contact_book"].keys())
@@ -263,14 +363,25 @@ if st.session_state["generated_sentence"]:
         sms_link = f"sms:{phone}?body={message}"
 
         st.markdown(
-            f'<a href="{sms_link}" target="_blank" '
-            f'style="display:block; text-align:center; '
-            f'background-color:#b9e7ff; color:#000000; '
-            f'padding:12px; border-radius:12px; '
-            f'text-decoration:none; font-weight:bold;">'
-            f'📨 문자 앱 열기</a>',
+            f'''
+            <a href="{sms_link}" target="_blank"
+            style="
+                display:block;
+                text-align:center;
+                background-color:#bde8ff;
+                color:#000000;
+                padding:12px;
+                border:2px solid #a5dcf7;
+                border-radius:12px;
+                text-decoration:none;
+                font-weight:bold;
+            ">
+            📨 문자 앱 열기
+            </a>
+            ''',
             unsafe_allow_html=True
         )
+
     else:
         st.info("문자를 보내려면 먼저 연락처를 등록해 주세요.")
 

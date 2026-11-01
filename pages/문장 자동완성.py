@@ -5,7 +5,7 @@ import json
 from urllib.parse import quote
 
 # ==================================
-# 기본 설정
+# 1. 기본 설정
 # ==================================
 st.set_page_config(
     page_title="한마디 도우미",
@@ -14,48 +14,118 @@ st.set_page_config(
 )
 
 # ==================================
-# 디자인
+# 2. 하늘색 디자인 + 검정색 글씨
 # ==================================
 st.markdown("""
 <style>
 .stApp {
-    background: linear-gradient(180deg,#D8F0FF,#F3FAFF,#FFFFFF);
+    background: linear-gradient(
+        180deg, #D8F0FF, #F3FAFF, #FFFFFF
+    );
 }
+
 .block-container {
     max-width: 650px;
     padding-top: 2rem;
 }
-h1,h2,h3 {
-    color: #285D86 !important;
+
+/* 모든 기본 글씨 검정색 */
+html, body, p, span, label, li,
+h1, h2, h3, h4, h5, h6,
+div, small {
+    color: #000000;
 }
+
+/* 제목 */
+h1, h2, h3, h4 {
+    color: #000000 !important;
+    font-weight: bold !important;
+}
+
+/* 상단 소개 카드 */
 .hero {
     background: #D5EDFF;
     padding: 25px 15px;
     border-radius: 25px;
     text-align: center;
 }
+
+.hero * {
+    color: #000000 !important;
+}
+
+/* 버튼 */
 div.stButton > button,
 div.stDownloadButton > button {
     width: 100%;
     min-height: 50px;
     border-radius: 14px;
     background: #DDF1FF;
-    color: #285D86;
-    border: 1px solid #B9DDF4;
+    color: #000000 !important;
+    border: 1px solid #8ABFE0;
     font-size: 16px;
     font-weight: bold;
 }
+
+div.stButton > button:hover,
+div.stDownloadButton > button:hover {
+    background: #BFE4FC;
+    color: #000000 !important;
+    border: 1px solid #589BC8;
+}
+
+/* 입력창 */
 div[data-testid="stTextInput"] input,
 div[data-testid="stTextArea"] textarea {
     border-radius: 12px;
     font-size: 16px;
+    color: #000000 !important;
+    background: #FFFFFF !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: #666666 !important;
+    opacity: 1;
+}
+
+/* 선택 메뉴 */
+div[data-baseweb="select"] *,
+div[data-baseweb="popover"] * {
+    color: #000000 !important;
+}
+
+/* 안내 박스 */
+div[data-testid="stAlert"] * {
+    color: #000000 !important;
+}
+
+/* 펼치기 메뉴 */
+details summary,
+details summary p {
+    color: #000000 !important;
+}
+
+/* 체크박스 및 라디오 */
+div[data-testid="stCheckbox"] *,
+div[data-testid="stRadio"] * {
+    color: #000000 !important;
+}
+
+/* 코드 영역 */
+div[data-testid="stCode"] * {
+    color: #000000 !important;
+}
+
+/* 구분선 */
+hr {
+    border-color: #B7D9EE;
 }
 </style>
 """, unsafe_allow_html=True)
 
 # ==================================
-# 데이터 초기화
-# 기존 contacts와 다른 이름 사용
+# 3. 데이터 초기화
 # ==================================
 if "contact_book" not in st.session_state:
     st.session_state["contact_book"] = {}
@@ -70,7 +140,7 @@ if "edited_sentence" not in st.session_state:
     st.session_state["edited_sentence"] = ""
 
 # ==================================
-# 문장 자료
+# 4. 문장 자료
 # ==================================
 SITUATIONS = {
     "👨‍👩‍👧 가족": {
@@ -107,15 +177,15 @@ SITUATIONS = {
 }
 
 # ==================================
-# 첫 화면
+# 5. 첫 화면
 # ==================================
 st.markdown("""
 <div class="hero">
     <div style="font-size:40px;">💙</div>
-    <div style="font-size:32px;font-weight:bold;color:#285D86;">
+    <div style="font-size:32px;font-weight:bold;">
         한마디 도우미
     </div>
-    <p style="color:#507895;">
+    <p>
         소중한 사람에게 마음을 쉽게 전해 보세요.
     </p>
 </div>
@@ -133,30 +203,34 @@ with st.expander("📖 간단한 사용 방법"):
 st.divider()
 
 # ==================================
-# 1. 연락처 등록
+# 6. 연락처 저장
 # ==================================
 st.header("👤 나의 연락처")
 st.write("자주 연락하는 사람을 등록해 보세요.")
 
 with st.form("contact_form", clear_on_submit=True):
-    name = st.text_input(
+
+    name_input = st.text_input(
         "이름",
-        placeholder="예: 우리 아들"
+        placeholder="예: 우리 아들",
+        max_chars=40
     )
 
-    phone = st.text_input(
+    phone_input = st.text_input(
         "전화번호",
-        placeholder="예: 010-1234-5678"
+        placeholder="예: 010-1234-5678",
+        max_chars=20
     )
 
-    save = st.form_submit_button(
+    save_button = st.form_submit_button(
         "＋ 연락처 저장",
         use_container_width=True
     )
 
-if save:
-    name = name.strip()
-    phone = re.sub(r"[\s()-]", "", phone.strip())
+if save_button:
+
+    name = name_input.strip()
+    phone = re.sub(r"[\s()-]", "", phone_input.strip())
 
     if not name:
         st.error("이름을 입력해 주세요.")
@@ -173,14 +247,16 @@ if save:
         st.rerun()
 
 # ==================================
-# 2. 연락처 목록 및 삭제
+# 7. 연락처 목록 및 삭제
 # ==================================
 st.subheader("📋 저장된 연락처")
 
 contacts = st.session_state["contact_book"]
 
 if contacts:
+
     for person, number in list(contacts.items()):
+
         col1, col2 = st.columns([3, 1])
 
         with col1:
@@ -188,17 +264,20 @@ if contacts:
             st.caption(number)
 
         with col2:
-            if st.button("삭제", key="del_" + person):
+            if st.button("삭제", key="delete_" + person):
                 del st.session_state["contact_book"][person]
                 st.rerun()
+
 else:
-    st.info("저장된 연락처가 없어요.")
+    st.info("아직 저장된 연락처가 없어요.")
 
 # ==================================
-# 3. 연락처 백업 및 복원
+# 8. 연락처 백업 및 복원
 # ==================================
 with st.expander("📁 연락처 백업 및 복원"):
+
     if contacts:
+
         backup = json.dumps(
             contacts,
             ensure_ascii=False,
@@ -219,7 +298,9 @@ with st.expander("📁 연락처 백업 및 복원"):
     )
 
     if uploaded is not None:
+
         if st.button("연락처 복원하기"):
+
             try:
                 data = json.load(uploaded)
 
@@ -229,6 +310,7 @@ with st.expander("📁 연락처 백업 및 복원"):
                 valid = {}
 
                 for person, number in data.items():
+
                     cleaned = re.sub(
                         r"[\s()-]",
                         "",
@@ -247,6 +329,7 @@ with st.expander("📁 연락처 백업 및 복원"):
                     raise ValueError()
 
                 st.session_state["contact_book"].update(valid)
+
                 st.success("연락처를 불러왔어요!")
                 st.rerun()
 
@@ -256,15 +339,13 @@ with st.expander("📁 연락처 백업 및 복원"):
 st.divider()
 
 # ==================================
-# 연락처가 없으면 여기서 중단
+# 9. 연락처 선택
 # ==================================
 if not st.session_state["contact_book"]:
+
     st.info("먼저 연락처를 저장해 주세요.")
     st.stop()
 
-# ==================================
-# 4. 받을 사람 선택
-# ==================================
 st.header("💌 문자 받을 사람")
 
 selected_name = st.selectbox(
@@ -280,7 +361,7 @@ st.caption("전화번호: " + selected_phone)
 st.divider()
 
 # ==================================
-# 5. 문장 만들기
+# 10. 문장 만들기
 # ==================================
 st.header("✏️ 전하고 싶은 말")
 
@@ -311,7 +392,9 @@ if st.button(
     type="primary",
     use_container_width=True
 ):
+
     try:
+
         template = SITUATIONS[situation][message_type]
 
         sentence = template.format(
@@ -320,7 +403,9 @@ if st.button(
         )
 
         if extra.strip():
+
             sentence = sentence.rstrip(" .!?") + ". " + extra.strip()
+
             if sentence[-1] not in ".!?":
                 sentence += "."
 
@@ -335,7 +420,7 @@ if st.button(
 st.divider()
 
 # ==================================
-# 6. 문장 수정 및 문자 보내기
+# 11. 문장 수정 및 문자 보내기
 # ==================================
 st.header("📝 완성된 문장")
 
@@ -353,6 +438,7 @@ if st.session_state["generated_sentence"]:
     final_message = st.session_state["edited_sentence"].strip()
 
     if final_message:
+
         st.subheader("📩 문자 보내기")
 
         st.write("최종 전송 내용")
@@ -373,11 +459,16 @@ if st.session_state["generated_sentence"]:
             f"""
             <a href="{android_link}" target="_self"
             style="
-            display:block;text-align:center;
-            background:#79C7F2;color:#174B73;
-            padding:16px;border-radius:15px;
-            font-size:18px;font-weight:bold;
-            text-decoration:none;margin:10px 0;">
+            display:block;
+            text-align:center;
+            background:#79C7F2;
+            color:#000000;
+            padding:16px;
+            border-radius:15px;
+            font-size:18px;
+            font-weight:bold;
+            text-decoration:none;
+            margin:10px 0;">
             📩 문자 앱 열기
             </a>
             """,
@@ -388,11 +479,16 @@ if st.session_state["generated_sentence"]:
             f"""
             <a href="{iphone_link}" target="_self"
             style="
-            display:block;text-align:center;
-            background:#D8F0FF;color:#174B73;
-            padding:16px;border-radius:15px;
-            font-size:18px;font-weight:bold;
-            text-decoration:none;margin:10px 0;">
+            display:block;
+            text-align:center;
+            background:#D8F0FF;
+            color:#000000;
+            padding:16px;
+            border-radius:15px;
+            font-size:18px;
+            font-weight:bold;
+            text-decoration:none;
+            margin:10px 0;">
             📱 아이폰 문자 앱 열기
             </a>
             """,
@@ -417,23 +513,24 @@ if st.session_state["generated_sentence"]:
 
     if st.button("🔄 새 문장 만들기", use_container_width=True):
         st.session_state["generated_sentence"] = ""
+        st.session_state["edited_sentence"] = ""
         st.rerun()
 
 else:
     st.info("위에서 문장 만들기를 눌러 주세요.")
 
 # ==================================
-# 마지막 안내
+# 12. 마지막 안내
 # ==================================
 st.divider()
 
 st.markdown("""
 <div class="hero">
     <div style="font-size:30px;">☁️ 💙 ☁️</div>
-    <b style="color:#285D86;font-size:18px;">
+    <b style="font-size:18px;">
         누구나 쉽게 소통할 수 있도록
     </b>
-    <p style="color:#507895;">한마디 도우미</p>
+    <p>한마디 도우미</p>
 </div>
 """, unsafe_allow_html=True)
 
